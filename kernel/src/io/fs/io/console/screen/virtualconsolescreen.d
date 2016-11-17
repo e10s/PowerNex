@@ -185,6 +185,24 @@ public:
 		parser.onCSIDispatch = delegate void(in CollectProcessor collectProcessor, in ParamProcessor paramProcessor, dchar ch) {
 			// TODO: Add more functions
 			switch (ch) {
+			case 'H': // CUP
+			case 'f': // HVP
+				size_t y = paramProcessor.collection[0];
+				if (y > 0) {
+					y--;
+				}
+
+				size_t x;
+				if (paramProcessor.collection.length > 1) {
+					x = paramProcessor.collection[1];
+					if (x > 0) {
+						x--;
+					}
+				}
+
+				_curY = y < _height ? y : _height - 1;
+				_curX = x < _width ? x : _width - 1;
+				break;
 			case 'J': // ED
 				if (paramProcessor.collection[0] == 2) {
 					clear();
