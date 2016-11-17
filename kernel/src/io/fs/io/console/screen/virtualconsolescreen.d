@@ -150,12 +150,129 @@ public:
 				break;
 			}
 		};
+		@property @safe @nogc pure nothrow Color ansiColorTable(uint colorCode, bool isBright) {
+			// dfmt off
+			static const Color[16] color = [
+				// Normal
+				Color(0, 0, 0),       // black
+				Color(170, 0, 0),     // red
+				Color(0, 170, 0),     // green
+				Color(170, 85, 0),    // yellow
+				Color(0, 0,170),      // blue
+				Color(170, 0, 170),   // magenta
+				Color(0, 170, 170),   // cyan
+				Color(170, 170, 170), // white
+
+				// Bright
+				Color(85, 85, 85),
+				Color(255, 85, 85),
+				Color(85, 255, 85),
+				Color(255, 255, 85),
+				Color(85, 85, 255),
+				Color(255, 85, 255),
+				Color(85, 255, 255),
+				Color(255, 255, 255)
+			];
+			// dfmt on
+
+			if (isBright) {
+				colorCode += 8;
+			}
+
+			return color[colorCode];
+		}
+
 		parser.onCSIDispatch = delegate void(in CollectProcessor collectProcessor, in ParamProcessor paramProcessor, dchar ch) {
 			// TODO: Add more functions
 			switch (ch) {
 			case 'J': // ED
 				if (paramProcessor.collection[0] == 2) {
 					clear();
+				}
+				break;
+			case 'm': // SGR
+				// TODO: Be more sophisticated!
+				bool inSeq;
+				int seqRemains;
+				foreach (i, e; paramProcessor.collection) {
+					if (inSeq) {
+						if (seqRemains > 0) {
+							seqRemains--;
+							continue;
+						} else {
+							inSeq = false;
+						}
+					}
+
+					switch (e) {
+					case 0:
+						_fgColor = Color(255, 255, 255);
+						_bgColor = Color();
+						// In addition reset style
+						break;
+					case 30: .. case 37:
+						_fgColor = ansiColorTable(e - 30, false);
+						break;
+					case 38:
+						if (paramProcessor.collection.length > i + 4 && paramProcessor.collection[i + 1] == 2) {
+							inSeq = true;
+							seqRemains = 4;
+							foreach (j, channel; paramProcessor.collection[i + 2 .. i + 5]) {
+								switch (j) {
+								case 0:
+									_fgColor.r = channel > 255 ? 255 : cast(ubyte)channel;
+									break;
+								case 1:
+									_fgColor.g = channel > 255 ? 255 : cast(ubyte)channel;
+									break;
+								case 2:
+									_fgColor.b = channel > 255 ? 255 : cast(ubyte)channel;
+									break;
+								default:
+									break;
+								}
+							}
+						}
+						break;
+					case 39:
+						_fgColor = Color(255, 255, 255);
+						break;
+					case 40: .. case 47:
+						_bgColor = ansiColorTable(e - 40, false);
+						break;
+					case 48:
+						if (paramProcessor.collection.length > i + 4 && paramProcessor.collection[i + 1] == 2) {
+							inSeq = true;
+							seqRemains = 4;
+							foreach (j, channel; paramProcessor.collection[i + 2 .. i + 5]) {
+								switch (j) {
+								case 0:
+									_bgColor.r = channel > 255 ? 255 : cast(ubyte)channel;
+									break;
+								case 1:
+									_bgColor.g = channel > 255 ? 255 : cast(ubyte)channel;
+									break;
+								case 2:
+									_bgColor.b = channel > 255 ? 255 : cast(ubyte)channel;
+									break;
+								default:
+									break;
+								}
+							}
+						}
+						break;
+					case 49:
+						_bgColor = Color();
+						break;
+					case 90: .. case 97:
+						_fgColor = ansiColorTable(e - 90, true);
+						break;
+					case 100: .. case 107:
+						_bgColor = ansiColorTable(e - 100, true);
+						break;
+					default:
+						break;
+					}
 				}
 				break;
 			default:
