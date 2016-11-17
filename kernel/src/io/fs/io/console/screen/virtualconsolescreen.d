@@ -49,6 +49,7 @@ public:
 		return maxBytes;
 	}
 
+	/+
 	override ulong write(ubyte[] buffer, ulong offset) {
 		UTF8Range str = UTF8Range(buffer);
 
@@ -98,6 +99,91 @@ public:
 			updateCursor();
 		return buffer.length;
 	}
++/
+
+	// FIXME: When attempts to move to somewhere after put just one character at the bottom right corner, scrolling should not occur.
+	override ulong write(ubyte[] buffer, ulong offset) {
+		auto parser = new ANSIEscapeParser;
+
+		// TODO: Append more handlers
+		auto onPrint = delegate void(dchar ch) {
+			_screen[_curY * _width + _curX] = FormattedChar(ch, _fgColor, _bgColor, CharStyle.none);
+			if (active)
+				updateChar(_curX, _curY);
+			_curX++;
+			if (_curX >= _width) {
+				_curY++;
+				_curX = 0;
+			}
+		};
+		parser.onPrint = onPrint;
+		parser.onExecute = delegate void(dchar ch) {
+			switch (ch) {
+			case '\n':
+				_curY++;
+				_curX = 0;
+				break;
+			case '\r':
+				_curX = 0;
+				break;
+			case '\b':
+				if (_curX)
+					_curX--;
+				break;
+			case '\t':
+				size_t goal = (_curX + 8) & ~7;
+				if (goal > _width)
+					goal = _width;
+				for (; _curX < goal; _curX++) {
+					_screen[_curY * _width + _curX] = _clearChar;
+					if (active)
+						updateChar(_curX, _curY);
+					_curX++;
+				}
+				if (_curX >= _width) {
+					_curY++;
+					_curX = 0;
+				}
+				break;
+			default:
+				onPrint(ch); // try to print anyway!
+				break;
+			}
+		};
+		parser.onCSIDispatch = delegate void(in CollectProcessor collectProcessor, in ParamProcessor paramProcessor, dchar ch) {
+			// TODO: Add more functions
+			switch (ch) {
+			case 'J': // ED
+				if (paramProcessor.collection[0] == 2) {
+					clear();
+				}
+				break;
+			default:
+				break;
+			}
+		};
+
+		// -------------------------------
+
+		UTF8Range str = UTF8Range(buffer);
+
+		if (active)
+			updateChar(_curX, _curY); // Remove cursor rendering
+
+		foreach (dchar ch; str) {
+			parser.eat(ch);
+
+			if (_curY >= _height) {
+				auto tmp = _curY - _height + 1;
+				_curY -= tmp;
+				_scroll(tmp);
+				_curY += tmp;
+			}
+		}
+		if (active)
+			updateCursor();
+		return buffer.length;
+	}
 
 	void clear() { //TODO:REMOVE
 		_clear();
@@ -125,6 +211,8 @@ protected:
 	size_t _height;
 	size_t _curX;
 	size_t _curY;
+
+	Color _fgColor = Color(255, 255, 255), _bgColor;
 
 	// abstract void OnNewText(size_t startIdx, size_t length); //TODO: Use this instead of updateChar?
 	abstract void onScroll(size_t lineCount);
