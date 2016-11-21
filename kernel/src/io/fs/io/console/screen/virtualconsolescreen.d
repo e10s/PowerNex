@@ -184,6 +184,68 @@ public:
 		parser.onCSIDispatch = delegate void(in CollectProcessor collectProcessor, in ParamProcessor paramProcessor, dchar ch) {
 			// TODO: Add more functions
 			switch (ch) {
+			case 'A': // CUU
+				size_t dy = paramProcessor.collection[0];
+				if (dy == 0) {
+					dy = 1;
+				}
+
+				if (_curY >= dy) {
+					_curY -= dy;
+				} else {
+					_curY = 0;
+				}
+				break;
+			case 'B': // CUD
+				size_t dy = paramProcessor.collection[0];
+				if (dy == 0) {
+					dy = 1;
+				}
+
+				if (_curY + dy <= _height - 1) {
+					_curY += dy;
+				} else {
+					_curY = _height - 1;
+				}
+				break;
+			case 'C': // CUF
+				size_t dx = paramProcessor.collection[0];
+				if (dx == 0) {
+					dx = 1;
+				}
+
+				if (_curX + dx <= _width - 1) {
+					_curX += dx;
+				} else {
+					_curX = _width - 1;
+				}
+				break;
+			case 'D': // CUB
+				size_t dx = paramProcessor.collection[0];
+				if (dx == 0) {
+					dx = 1;
+				}
+
+				if (_curX >= dx) {
+					_curX -= dx;
+				} else {
+					_curX = 0;
+				}
+				break;
+			case 'E': // CNL
+				_curX = 0;
+				goto case 'B';
+			case 'F': // CPL
+				_curX = 0;
+				goto case 'A';
+			case 'G': // CHA
+				size_t x = paramProcessor.collection[1];
+				if (x > 0) {
+					x--;
+				}
+
+				_curX = x < _width ? x : _width - 1;
+				break;
 			case 'H': // CUP
 			case 'f': // HVP
 				size_t y = paramProcessor.collection[0];
