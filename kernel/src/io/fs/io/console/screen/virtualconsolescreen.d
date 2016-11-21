@@ -183,6 +183,10 @@ public:
 
 		parser.onCSIDispatch = delegate void(in CollectProcessor collectProcessor, in ParamProcessor paramProcessor, dchar ch) {
 			// TODO: Add more functions
+			if (collectProcessor.collection.length) {
+				return;
+			}
+
 			switch (ch) {
 			case 'A': // CUU
 				size_t dy = paramProcessor.collection[0];
