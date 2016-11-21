@@ -117,7 +117,7 @@ public:
 			}
 		};
 		parser.onPrint = onPrint;
-		parser.onExecute = delegate void(dchar ch) {
+		auto onExecute = delegate void(dchar ch) {
 			switch (ch) {
 			case '\n':
 				_curY++;
@@ -149,6 +149,7 @@ public:
 				break;
 			}
 		};
+		parser.onExecute = onExecute;
 		@property @safe @nogc pure nothrow Color ansiColorTable(uint colorCode, bool isBright) {
 			// dfmt off
 			static const Color[16] color = [
@@ -267,6 +268,16 @@ public:
 
 				_curY = y < _height ? y : _height - 1;
 				_curX = x < _width ? x : _width - 1;
+				break;
+			case 'I': // CHT
+				size_t n = paramProcessor.collection[0];
+				if (n == 0) {
+					n = 1;
+				}
+
+				foreach (i; 0 .. n) {
+					onExecute('\t');
+				}
 				break;
 			case 'J': // ED
 				if (paramProcessor.collection[0] == 2) {
