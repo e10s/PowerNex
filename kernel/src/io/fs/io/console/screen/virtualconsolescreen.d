@@ -280,8 +280,30 @@ public:
 				}
 				break;
 			case 'J': // ED
-				if (paramProcessor.collection[0] == 2) {
-					clear();
+				switch (paramProcessor.collection[0]) {
+				case 0:
+					for (size_t i = _curY * _width + _curX; i < _height * _width; i++) {
+						_screen[i] = _clearChar;
+						updateChar(i % _width, i / _width);
+					}
+					break;
+				case 1:
+					for (size_t i = 0; i <= _curY * _width + _curX; i++) {
+						_screen[i] = _clearChar;
+						updateChar(i % _width, i / _width);
+					}
+					break;
+				case 2:
+					immutable x = _curX, y = _curY;
+					_scroll(_height);
+					_curX = x;
+					_curY = y;
+
+					if (active)
+						updateCursor();
+					break;
+				default:
+					break;
 				}
 				break;
 			case 'm': // SGR
