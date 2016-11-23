@@ -189,6 +189,25 @@ public:
 			}
 
 			switch (ch) {
+			case '@': // ICH
+				size_t n = paramProcessor.collection[0];
+				if (n == 0) {
+					n = 1;
+				}
+
+				immutable dstFrontX = _curX + n > _width ? _width : _curX + n;
+
+				foreach (i; dstFrontX .. _width) {
+					immutable dstX = _width - 1 + dstFrontX - i;
+					immutable srcX = dstX - n;
+					_screen[_curY * _width + dstX] = _screen[_curY * _width + srcX];
+					updateChar(dstX, _curY);
+				}
+				foreach (x; _curX .. dstFrontX) {
+					_screen[_curY * _width + x] = _clearChar;
+					updateChar(x, _curY);
+				}
+				break;
 			case 'A': // CUU
 				size_t dy = paramProcessor.collection[0];
 				if (dy == 0) {
