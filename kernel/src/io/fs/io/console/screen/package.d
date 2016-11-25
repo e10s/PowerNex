@@ -6,4 +6,5 @@ public {
 	import io.fs.io.console.screen.virtualconsolescreentextmode;
 	import io.fs.io.console.screen.virtualconsolescreenframebuffer;
 	import io.fs.io.console.screen.ansiescapeparser;
+	import io.fs.io.console.screen.colorpalette;
 }

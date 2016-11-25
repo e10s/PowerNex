@@ -119,6 +119,7 @@ enum kernelDSources = mapKernelSources(
 	"io/fs/io/console/screen/virtualconsolescreentextmode.d",
 	"io/fs/io/console/screen/virtualconsolescreenframebuffer.d",
 	"io/fs/io/console/screen/ansiescapeparser.d",
+	"io/fs/io/console/screen/colorpalette.d",
 	"memory/allocator/heapallocator.d",
 	"memory/allocator/package.d",
 	"memory/allocator/staticallocator.d",
