@@ -260,9 +260,8 @@ public:
 					n = 1;
 				}
 
-				foreach (i; 0 .. n) {
-					onExecute('\t');
-				}
+				immutable goal = (_curX + 8 * n) & ~7;
+				_curX = goal < _width ? goal : _width - 1;
 				break;
 			case 'J': // ED
 				switch (paramProcessor.collection[0]) {
