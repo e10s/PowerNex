@@ -163,16 +163,14 @@ public:
 					n = 1;
 				}
 
-				immutable dstFrontX = _curX + n > _width ? _width : _curX + n;
-
-				foreach (i; dstFrontX .. _width) {
-					immutable dstX = _width - 1 + dstFrontX - i;
-					immutable srcX = dstX - n;
-					_screen[_curY * _width + dstX] = _screen[_curY * _width + srcX];
-					updateChar(dstX, _curY);
-				}
-				foreach (x; _curX .. dstFrontX) {
-					_screen[_curY * _width + x] = _clearChar;
+				immutable dstX = _curX + n > _width ? _width : _curX + n;
+				immutable srcX = dstX - n;
+				immutable dstOffset = FormattedChar.sizeof * (_curY * _width + dstX);
+				immutable srcOffset = FormattedChar.sizeof * (_curY * _width + srcX);
+				immutable size = FormattedChar.sizeof * (_width - dstX);
+				memmove((_screen.VirtAddress + dstOffset).ptr, (_screen.VirtAddress + srcOffset).ptr, size);
+				_screen[_curY * _width + _curX .. _curY * _width + dstX] = _clearChar;
+				foreach (x; _curX .. _width) {
 					updateChar(x, _curY);
 				}
 				break;
