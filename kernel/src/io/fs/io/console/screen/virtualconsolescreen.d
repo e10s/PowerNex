@@ -359,6 +359,13 @@ public:
 									break;
 								}
 							}
+						} else if (paramProcessor.collection.length > i + 2 && paramProcessor.collection[i + 1] == 5) {
+							inSeq = true;
+							seqRemains = 2;
+							immutable n = paramProcessor.collection[i + 2];
+							if (n < 256) {
+								_fgColor = xterm256ColorPalette(n);
+							}
 						}
 						break;
 					case 39:
@@ -385,6 +392,13 @@ public:
 								default:
 									break;
 								}
+							}
+						} else if (paramProcessor.collection.length > i + 2 && paramProcessor.collection[i + 1] == 5) {
+							inSeq = true;
+							seqRemains = 2;
+							immutable n = paramProcessor.collection[i + 2];
+							if (n < 256) {
+								_bgColor = xterm256ColorPalette(n);
 							}
 						}
 						break;
