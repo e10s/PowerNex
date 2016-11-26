@@ -314,6 +314,22 @@ public:
 					break;
 				}
 				break;
+			case 'P': // DCH
+				size_t n = paramProcessor.collection[0];
+				if (n == 0) {
+					n = 1;
+				}
+
+				immutable srcX = _curX + n > _width ? _width : _curX + n;
+				immutable dstOffset = FormattedChar.sizeof * (_curY * _width + _curX);
+				immutable srcOffset = FormattedChar.sizeof * (_curY * _width + srcX);
+				immutable size = FormattedChar.sizeof * (_width - srcX);
+				memmove((_screen.VirtAddress + dstOffset).ptr, (_screen.VirtAddress + srcOffset).ptr, size);
+				_screen[_curY * _width + _width - (srcX - _curX) .. _curY * _width + _width] = _clearChar;
+				foreach (x; _curX .. _width) {
+					updateChar(x, _curY);
+				}
+				break;
 			case 'm': // SGR
 				// TODO: Be more sophisticated!
 				bool inSeq;
