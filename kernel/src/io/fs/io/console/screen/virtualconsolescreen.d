@@ -391,21 +391,23 @@ public:
 						if (paramProcessor.collection.length > i + 4 && paramProcessor.collection[i + 1] == 2) {
 							inSeq = true;
 							seqRemains = 4;
+							auto bgColor = _bgColor;
 							foreach (j, channel; paramProcessor.collection[i + 2 .. i + 5]) {
 								switch (j) {
 								case 0:
-									_bgColor.r = channel > 255 ? 255 : cast(ubyte)channel;
+									bgColor.r = channel > 255 ? 255 : cast(ubyte)channel;
 									break;
 								case 1:
-									_bgColor.g = channel > 255 ? 255 : cast(ubyte)channel;
+									bgColor.g = channel > 255 ? 255 : cast(ubyte)channel;
 									break;
 								case 2:
-									_bgColor.b = channel > 255 ? 255 : cast(ubyte)channel;
+									bgColor.b = channel > 255 ? 255 : cast(ubyte)channel;
 									break;
 								default:
 									break;
 								}
 							}
+							_bgColor = bgColor;
 						} else if (paramProcessor.collection.length > i + 2 && paramProcessor.collection[i + 1] == 5) {
 							inSeq = true;
 							seqRemains = 2;
@@ -483,7 +485,17 @@ protected:
 	size_t _curX;
 	size_t _curY;
 
-	Color _fgColor = Color(255, 255, 255), _bgColor;
+	Color _fgColor = Color(255, 255, 255);
+
+	@property ref Color _bgColor(Color bgColor) {
+		__bgColor = bgColor;
+		_clearChar.bg = bgColor; // main purpose!!
+		return __bgColor;
+	}
+
+	@property ref Color _bgColor() {
+		return __bgColor;
+	}
 
 	// abstract void OnNewText(size_t startIdx, size_t length); //TODO: Use this instead of updateChar?
 	abstract void onScroll(size_t lineCount);
@@ -491,6 +503,7 @@ protected:
 	abstract void updateChar(size_t x, size_t y);
 
 private:
+	Color __bgColor;
 	bool _inUse;
 	bool _active;
 
