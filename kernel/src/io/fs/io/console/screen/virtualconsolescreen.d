@@ -330,6 +330,18 @@ public:
 					updateChar(x, _curY);
 				}
 				break;
+			case 'X': // ECH
+				size_t n = paramProcessor.collection[0];
+				if (n == 0) {
+					n = 1;
+				}
+
+				immutable dstX = _curX + n > _width ? _width : _curX + n;
+				_screen[_curY * _width + _curX .. _curY * _width + dstX] = _clearChar;
+				foreach (x; _curX .. dstX) {
+					updateChar(x, _curY);
+				}
+				break;
 			case 'm': // SGR
 				// TODO: Be more sophisticated!
 				bool inSeq;
