@@ -293,21 +293,21 @@ public:
 			case 'K': // EL
 				switch (paramProcessor.collection[0]) {
 				case 0:
-					for (size_t i = _curY * _width + _curX; i < _curY * _width + _width; i++) {
-						_screen[i] = _clearChar;
-						updateChar(i % _width, i / _width);
+					_screen[_curY * _width + _curX .. _curY * _width + _width] = _clearChar;
+					foreach (x; _curX .. _width) {
+						updateChar(x, _curY);
 					}
 					break;
 				case 1:
-					for (size_t i = _curY * _width; i <= _curY * _width + _curX; i++) {
-						_screen[i] = _clearChar;
-						updateChar(i % _width, i / _width);
+					_screen[_curY * _width .. _curY * _width + _curX + 1] = _clearChar;
+					foreach (x; 0 .. _curX + 1) {
+						updateChar(x, _curY);
 					}
 					break;
 				case 2:
-					for (size_t i = _curY * _width; i < _curY * _width + _width; i++) {
-						_screen[i] = _clearChar;
-						updateChar(i % _width, i / _width);
+					_screen[_curY * _width .. _curY * _width + _width] = _clearChar;
+					foreach (x; 0 .. _width) {
+						updateChar(x, _curY);
 					}
 					break;
 				default:
