@@ -233,7 +233,8 @@ public:
 				_curX = 0;
 				goto case 'A';
 			case 'G': // CHA
-				size_t x = paramProcessor.collection[1];
+			case '`': // HPA
+				size_t x = paramProcessor.collection[0];
 				if (x > 0) {
 					x--;
 				}
