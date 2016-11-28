@@ -342,6 +342,14 @@ public:
 					updateChar(x, _curY);
 				}
 				break;
+			case 'Z': // CBT
+				size_t n = paramProcessor.collection[0];
+				if (n == 0) {
+					n = 1;
+				}
+
+				_curX = _curX > 0 ? (_curX - 1) / n & ~7 : 0;
+				break;
 			case 'm': // SGR
 				// TODO: Be more sophisticated!
 				bool inSeq;
