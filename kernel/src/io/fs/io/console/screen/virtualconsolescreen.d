@@ -355,6 +355,14 @@ public:
 
 				_curX = _curX > 0 ? (_curX - 1) / n & ~7 : 0;
 				break;
+			case 'd': // VPA
+				size_t y = paramProcessor.collection[0];
+				if (y > 0) {
+					y--;
+				}
+
+				_curY = y < _height ? y : _height - 1;
+				break;
 			case 'm': // SGR
 				// TODO: Be more sophisticated!
 				bool inSeq;
