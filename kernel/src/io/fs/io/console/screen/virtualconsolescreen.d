@@ -175,6 +175,7 @@ public:
 				}
 				break;
 			case 'A': // CUU
+			case 'k': // VPB
 				size_t dy = paramProcessor.collection[0];
 				if (dy == 0) {
 					dy = 1;
@@ -187,6 +188,7 @@ public:
 				}
 				break;
 			case 'B': // CUD
+			case 'e': // VPR
 				size_t dy = paramProcessor.collection[0];
 				if (dy == 0) {
 					dy = 1;
@@ -199,6 +201,7 @@ public:
 				}
 				break;
 			case 'C': // CUF
+			case 'a': // HPR
 				size_t dx = paramProcessor.collection[0];
 				if (dx == 0) {
 					dx = 1;
@@ -211,6 +214,7 @@ public:
 				}
 				break;
 			case 'D': // CUB
+			case 'j': // HPB
 				size_t dx = paramProcessor.collection[0];
 				if (dx == 0) {
 					dx = 1;
