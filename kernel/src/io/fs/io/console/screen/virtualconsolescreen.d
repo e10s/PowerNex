@@ -287,9 +287,6 @@ public:
 					_scroll(_height);
 					_curX = x;
 					_curY = y;
-
-					if (active)
-						updateCursor();
 					break;
 				default:
 					break;
