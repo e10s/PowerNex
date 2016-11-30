@@ -335,6 +335,17 @@ public:
 					updateChar(x, _curY);
 				}
 				break;
+			case 'S': // SU
+				size_t n = paramProcessor.collection[0];
+				if (n == 0) {
+					n = 1;
+				}
+
+				immutable x = _curX, y = _curY;
+				_scroll(n);
+				_curX = x;
+				_curY = y;
+				break;
 			case 'X': // ECH
 				size_t n = paramProcessor.collection[0];
 				if (n == 0) {
