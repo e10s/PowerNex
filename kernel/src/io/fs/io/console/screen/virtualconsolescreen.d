@@ -334,6 +334,24 @@ public:
 					}
 				}
 				break;
+			case 'M': // DL
+				size_t n = paramProcessor.collection[0];
+				if (n == 0) {
+					n = 1;
+				}
+
+				immutable srcY = _curY + n > _height ? _height : _curY + n;
+				immutable dstOffset = FormattedChar.sizeof * (_curY * _width);
+				immutable srcOffset = FormattedChar.sizeof * (srcY * _width);
+				immutable size = FormattedChar.sizeof * (_height - srcY) * _width;
+				memmove((_screen.VirtAddress + dstOffset).ptr, (_screen.VirtAddress + srcOffset).ptr, size);
+				_screen[(_height - srcY + _curY) * _width .. _height * _width] = _clearChar;
+				foreach (y; _curY .. _height) {
+					foreach (x; 0 .. _width) {
+						updateChar(x, y);
+					}
+				}
+				break;
 			case 'P': // DCH
 				size_t n = paramProcessor.collection[0];
 				if (n == 0) {
