@@ -316,6 +316,24 @@ public:
 					break;
 				}
 				break;
+			case 'L': // IL
+				size_t n = paramProcessor.collection[0];
+				if (n == 0) {
+					n = 1;
+				}
+
+				immutable dstY = _curY + n > _height ? _height : _curY + n;
+				immutable dstOffset = FormattedChar.sizeof * (dstY * _width);
+				immutable srcOffset = FormattedChar.sizeof * (_curY * _width);
+				immutable size = FormattedChar.sizeof * (_height - dstY) * _width;
+				memmove((_screen.VirtAddress + dstOffset).ptr, (_screen.VirtAddress + srcOffset).ptr, size);
+				_screen[_curY * _width .. dstY * _width] = _clearChar;
+				foreach (y; _curY .. _height) {
+					foreach (x; 0 .. _width) {
+						updateChar(x, y);
+					}
+				}
+				break;
 			case 'P': // DCH
 				size_t n = paramProcessor.collection[0];
 				if (n == 0) {
