@@ -379,6 +379,24 @@ public:
 				_curX = x;
 				_curY = y;
 				break;
+			case 'T': // SD
+				// TODO: We should consider framebuffer scrolling.
+				size_t n = paramProcessor.collection[0];
+				if (n == 0) {
+					n = 1;
+				}
+
+				immutable dstY = n > _height ? _height : n;
+				immutable dstOffset = FormattedChar.sizeof * (dstY * _width);
+				immutable size = FormattedChar.sizeof * (_height - dstY) * _width;
+				memmove((_screen.VirtAddress + dstOffset).ptr, _screen.ptr, size);
+				_screen[0 .. dstY * _width] = _clearChar;
+				foreach (y; 0 .. _height) {
+					foreach (x; 0 .. _width) {
+						updateChar(x, y);
+					}
+				}
+				break;
 			case 'X': // ECH
 				size_t n = paramProcessor.collection[0];
 				if (n == 0) {
