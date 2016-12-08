@@ -174,17 +174,21 @@ class ANSIEscapeParser {
 		return handler;
 	}
 
-	private dstring _eaten;
+	//private dstring _eaten;
 
 	/// Processes a character.
 	typeof(this) eat(dchar ch) {
+		/* Recover from invalid sequence
 		_eaten ~= ch;
 		if (!_stateContext.state.digest(ch)) {
 			foreach (c; _eaten) {
 				_vomit(c);
 			}
 			_eaten = null;
-		}
+		}*/
+
+		// Ignore invalid sequences!
+		_stateContext.state.digest(ch);
 		return this;
 	}
 
