@@ -18,6 +18,8 @@ public:
 			_screen[i] = _clearChar;
 
 		_lineStarts = new size_t[height];
+
+		_initializeParser();
 	}
 
 	~this() {
@@ -103,7 +105,81 @@ public:
 
 	// FIXME: When attempts to move to somewhere after put just one character at the bottom right corner, scrolling should not occur.
 	override ulong write(ubyte[] buffer, ulong offset) {
-		auto parser = new ANSIEscapeParser;
+		UTF8Range str = UTF8Range(buffer);
+
+		if (active)
+			updateChar(_curX, _curY); // Remove cursor rendering
+
+		foreach (dchar ch; str) {
+			_parser.eat(ch);
+
+			if (_curY >= _height) {
+				auto tmp = _curY - _height + 1;
+				_curY -= tmp;
+				_scroll(tmp);
+				_curY += tmp;
+			}
+		}
+		if (active)
+			updateCursor();
+		return buffer.length;
+	}
+
+	void clear() { //TODO:REMOVE
+		_clear();
+	}
+
+	@property bool active() {
+		return _active;
+	}
+
+	@property bool active(bool active) {
+		if (active && !_active) {
+			for (size_t h = 0; h < _height; h++)
+				for (size_t w = 0; w < _width; w++)
+					updateChar(w, h);
+			updateCursor();
+		}
+		_active = active;
+		return _active;
+	}
+
+protected:
+	FormattedChar[] _screen;
+	FormattedChar _clearChar;
+	size_t _width;
+	size_t _height;
+	size_t _curX;
+	size_t _curY;
+
+	Color _fgColor = Color(255, 255, 255);
+
+	@property ref Color _bgColor(Color bgColor) {
+		__bgColor = bgColor;
+		_clearChar.bg = bgColor; // main purpose!!
+		return __bgColor;
+	}
+
+	@property ref Color _bgColor() {
+		return __bgColor;
+	}
+
+	// abstract void OnNewText(size_t startIdx, size_t length); //TODO: Use this instead of updateChar?
+	abstract void onScroll(size_t lineCount);
+	abstract void updateCursor();
+	abstract void updateChar(size_t x, size_t y);
+
+private:
+	Color __bgColor;
+	bool _inUse;
+	bool _active;
+
+	size_t[] _lineStarts;
+
+	ANSIEscapeParser _parser;
+
+	void _initializeParser() {
+		_parser = new ANSIEscapeParser;
 
 		// TODO: Append more handlers
 		auto onPrint = delegate void(dchar ch) {
@@ -116,7 +192,7 @@ public:
 				_curX = 0;
 			}
 		};
-		parser.onPrint = onPrint;
+		_parser.onPrint = onPrint;
 		auto onExecute = delegate void(dchar ch) {
 			switch (ch) {
 			case '\n':
@@ -149,8 +225,8 @@ public:
 				break;
 			}
 		};
-		parser.onExecute = onExecute;
-		parser.onCSIDispatch = delegate void(in CollectProcessor collectProcessor, in ParamProcessor paramProcessor, dchar ch) {
+		_parser.onExecute = onExecute;
+		_parser.onCSIDispatch = delegate void(in CollectProcessor collectProcessor, in ParamProcessor paramProcessor, dchar ch) {
 			// TODO: Add more functions
 			if (collectProcessor.collection.length) {
 				return;
@@ -530,79 +606,7 @@ public:
 				break;
 			}
 		};
-
-		// -------------------------------
-
-		UTF8Range str = UTF8Range(buffer);
-
-		if (active)
-			updateChar(_curX, _curY); // Remove cursor rendering
-
-		foreach (dchar ch; str) {
-			parser.eat(ch);
-
-			if (_curY >= _height) {
-				auto tmp = _curY - _height + 1;
-				_curY -= tmp;
-				_scroll(tmp);
-				_curY += tmp;
-			}
-		}
-		if (active)
-			updateCursor();
-		return buffer.length;
 	}
-
-	void clear() { //TODO:REMOVE
-		_clear();
-	}
-
-	@property bool active() {
-		return _active;
-	}
-
-	@property bool active(bool active) {
-		if (active && !_active) {
-			for (size_t h = 0; h < _height; h++)
-				for (size_t w = 0; w < _width; w++)
-					updateChar(w, h);
-			updateCursor();
-		}
-		_active = active;
-		return _active;
-	}
-
-protected:
-	FormattedChar[] _screen;
-	FormattedChar _clearChar;
-	size_t _width;
-	size_t _height;
-	size_t _curX;
-	size_t _curY;
-
-	Color _fgColor = Color(255, 255, 255);
-
-	@property ref Color _bgColor(Color bgColor) {
-		__bgColor = bgColor;
-		_clearChar.bg = bgColor; // main purpose!!
-		return __bgColor;
-	}
-
-	@property ref Color _bgColor() {
-		return __bgColor;
-	}
-
-	// abstract void OnNewText(size_t startIdx, size_t length); //TODO: Use this instead of updateChar?
-	abstract void onScroll(size_t lineCount);
-	abstract void updateCursor();
-	abstract void updateChar(size_t x, size_t y);
-
-private:
-	Color __bgColor;
-	bool _inUse;
-	bool _active;
-
-	size_t[] _lineStarts;
 
 	ref UTF8Range _prepareData(ref return UTF8Range str) {
 		size_t charCount = _curX;
