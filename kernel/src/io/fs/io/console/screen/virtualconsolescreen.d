@@ -207,18 +207,8 @@ private:
 					_curX--;
 				break;
 			case '\t':
-				size_t goal = (_curX + 8) & ~7;
-				if (goal > _width)
-					goal = _width;
-				for (; _curX < goal; _curX++) {
-					_screen[_curY * _width + _curX] = _clearChar;
-					if (active)
-						updateChar(_curX, _curY);
-				}
-				if (_curX >= _width) {
-					_curY++;
-					_curX = 0;
-				}
+				immutable goal = (_curX + 8) & ~7;
+				_curX = goal < _width ? goal : _width - 1;
 				break;
 			default:
 				onPrint(ch); // try to print anyway!
