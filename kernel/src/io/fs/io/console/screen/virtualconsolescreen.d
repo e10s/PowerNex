@@ -115,9 +115,9 @@ public:
 
 			if (_curY >= _height) {
 				auto tmp = _curY - _height + 1;
-				_curY -= tmp;
+				_moveCursorTo(_curX, _curY - tmp);
 				_scroll(tmp);
-				_curY += tmp;
+				_moveCursorTo(_curX, _curY + tmp);
 			}
 		}
 		if (active)
@@ -186,29 +186,30 @@ private:
 			_screen[_curY * _width + _curX] = FormattedChar(ch, _fgColor, _bgColor, CharStyle.none);
 			if (active)
 				updateChar(_curX, _curY);
-			_curX++;
-			if (_curX >= _width) {
-				_curY++;
-				_curX = 0;
+			immutable tmp = _curX + 1;
+			if (tmp >= _width) {
+				_moveCursorTo(0, _curY + 1);
+			} else {
+				_moveCursorTo(tmp, _curY);
 			}
 		};
 		_parser.onPrint = onPrint;
 		auto onExecute = delegate void(dchar ch) {
 			switch (ch) {
 			case '\n':
-				_curY++;
-				_curX = 0;
+				_moveCursorTo(0, _curY + 1);
 				break;
 			case '\r':
-				_curX = 0;
+				_moveCursorTo(0, _curY);
 				break;
 			case '\b':
-				if (_curX)
-					_curX--;
+				if (_curX) {
+					_moveCursorTo(_curX - 1, _curY);
+				}
 				break;
 			case '\t':
 				immutable goal = (_curX + 8) & ~7;
-				_curX = goal < _width ? goal : _width - 1;
+				_moveCursorTo(goal < _width ? goal : _width - 1, _curY);
 				break;
 			default:
 				onPrint(ch); // try to print anyway!
@@ -248,9 +249,9 @@ private:
 				}
 
 				if (_curY >= dy) {
-					_curY -= dy;
+					_moveCursorTo(_curX, _curY - dy);
 				} else {
-					_curY = 0;
+					_moveCursorTo(_curX, 0);
 				}
 				break;
 			case 'B': // CUD
@@ -261,9 +262,9 @@ private:
 				}
 
 				if (_curY + dy <= _height - 1) {
-					_curY += dy;
+					_moveCursorTo(_curX, _curY + dy);
 				} else {
-					_curY = _height - 1;
+					_moveCursorTo(_curX, _height - 1);
 				}
 				break;
 			case 'C': // CUF
@@ -274,9 +275,9 @@ private:
 				}
 
 				if (_curX + dx <= _width - 1) {
-					_curX += dx;
+					_moveCursorTo(_curX + dx, _curY);
 				} else {
-					_curX = _width - 1;
+					_moveCursorTo(_width - 1, _curY);
 				}
 				break;
 			case 'D': // CUB
@@ -287,16 +288,16 @@ private:
 				}
 
 				if (_curX >= dx) {
-					_curX -= dx;
+					_moveCursorTo(_curX - dx, _curY);
 				} else {
-					_curX = 0;
+					_moveCursorTo(0, _curY);
 				}
 				break;
 			case 'E': // CNL
-				_curX = 0;
+				_moveCursorTo(0, _curY);
 				goto case 'B';
 			case 'F': // CPL
-				_curX = 0;
+				_moveCursorTo(0, _curY);
 				goto case 'A';
 			case 'G': // CHA
 			case '`': // HPA
@@ -305,7 +306,7 @@ private:
 					x--;
 				}
 
-				_curX = x < _width ? x : _width - 1;
+				_moveCursorTo(x < _width ? x : _width - 1, _curY);
 				break;
 			case 'H': // CUP
 			case 'f': // HVP
@@ -322,8 +323,7 @@ private:
 					}
 				}
 
-				_curY = y < _height ? y : _height - 1;
-				_curX = x < _width ? x : _width - 1;
+				_moveCursorTo(x < _width ? x : _width - 1, y < _height ? y : _height - 1);
 				break;
 			case 'I': // CHT
 				size_t n = paramProcessor.collection[0];
@@ -332,7 +332,7 @@ private:
 				}
 
 				immutable goal = (_curX + 8 * n) & ~7;
-				_curX = goal < _width ? goal : _width - 1;
+				_moveCursorTo(goal < _width ? goal : _width - 1, _curY);
 				break;
 			case 'J': // ED
 				switch (paramProcessor.collection[0]) {
@@ -351,8 +351,7 @@ private:
 				case 2:
 					immutable x = _curX, y = _curY;
 					_scroll(_height);
-					_curX = x;
-					_curY = y;
+					_moveCursorTo(x, y);
 					break;
 				default:
 					break;
@@ -442,8 +441,7 @@ private:
 
 				immutable x = _curX, y = _curY;
 				_scroll(n);
-				_curX = x;
-				_curY = y;
+				_moveCursorTo(x, y);
 				break;
 			case 'T': // SD
 				// TODO: We should consider framebuffer scrolling.
@@ -481,7 +479,7 @@ private:
 					n = 1;
 				}
 
-				_curX = _curX > 0 ? (_curX - 1) / n & ~7 : 0;
+				_moveCursorTo(_curX > 0 ? (_curX - 1) / n & ~7 : 0, _curY);
 				break;
 			case 'd': // VPA
 				size_t y = paramProcessor.collection[0];
@@ -489,7 +487,7 @@ private:
 					y--;
 				}
 
-				_curY = y < _height ? y : _height - 1;
+				_moveCursorTo(_curX, y < _height ? y : _height - 1);
 				break;
 			case 'm': // SGR
 				// TODO: Be more sophisticated!
@@ -701,10 +699,11 @@ private:
 			_screen[i] = _clearChar;
 
 		ssize_t tmp = _curY - lineCount;
-		if (tmp < 0)
-			_curY = _curX = 0;
-		else
-			_curY = tmp;
+		if (tmp < 0) {
+			_moveCursorTo(0, 0);
+		} else {
+			_moveCursorTo(_curX, tmp);
+		}
 	}
 
 	void _clear() {
@@ -712,5 +711,10 @@ private:
 		_curX = _curY = 0;
 		if (active)
 			updateCursor();
+	}
+
+	void _moveCursorTo(size_t x, size_t y) {
+		_curX = x;
+		_curY = y;
 	}
 }
