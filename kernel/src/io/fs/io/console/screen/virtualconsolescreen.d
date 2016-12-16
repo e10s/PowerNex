@@ -103,7 +103,6 @@ public:
 	}
 +/
 
-	// FIXME: When attempts to move to somewhere after put just one character at the bottom right corner, scrolling should not occur.
 	override ulong write(ubyte[] buffer, ulong offset) {
 		UTF8Range str = UTF8Range(buffer);
 
@@ -112,13 +111,6 @@ public:
 
 		foreach (dchar ch; str) {
 			_parser.eat(ch);
-
-			if (_curY >= _height) {
-				auto tmp = _curY - _height + 1;
-				_moveCursorTo(_curX, _curY - tmp);
-				_scroll(tmp);
-				_moveCursorTo(_curX, _curY + tmp);
-			}
 		}
 		if (active)
 			updateCursor();
@@ -170,6 +162,14 @@ protected:
 	abstract void updateChar(size_t x, size_t y);
 
 private:
+	/**
+	 * Used to emulate VT100/xterm.
+	 * This will become true right after a character is put onto the rightmost column.
+	 * It looks undocumented and implementation dependent which actions, except printing characters,
+	 * cause this to turn from true to false.
+	 */
+	bool _atRightOfRightmost;
+
 	Color __bgColor;
 	bool _inUse;
 	bool _active;
@@ -183,12 +183,23 @@ private:
 
 		// TODO: Append more handlers
 		auto onPrint = delegate void(dchar ch) {
+			if (_atRightOfRightmost) {
+				if (_curY == _height - 1) {
+					_moveCursorTo(0, _curY);
+					_scroll(1);
+				} else {
+					assert(_curY < _height - 1);
+					_moveCursorTo(0, _curY + 1);
+				}
+			}
 			_screen[_curY * _width + _curX] = FormattedChar(ch, _fgColor, _bgColor, CharStyle.none);
 			if (active)
 				updateChar(_curX, _curY);
 			immutable tmp = _curX + 1;
 			if (tmp >= _width) {
-				_moveCursorTo(0, _curY + 1);
+				// The cursor is "temporarily" kept at the rightmost column to prepare for next action.
+				_moveCursorTo(_width - 1, _curY);
+				_atRightOfRightmost = true;
 			} else {
 				_moveCursorTo(tmp, _curY);
 			}
@@ -197,7 +208,13 @@ private:
 		auto onExecute = delegate void(dchar ch) {
 			switch (ch) {
 			case '\n':
-				_moveCursorTo(0, _curY + 1);
+				if (_curY == _height - 1) {
+					_moveCursorTo(0, _curY);
+					_scroll(1);
+				} else {
+					assert(_curY < _height - 1);
+					_moveCursorTo(0, _curY + 1);
+				}
 				break;
 			case '\r':
 				_moveCursorTo(0, _curY);
@@ -208,8 +225,10 @@ private:
 				}
 				break;
 			case '\t':
-				immutable goal = (_curX + 8) & ~7;
-				_moveCursorTo(goal < _width ? goal : _width - 1, _curY);
+				if (!_atRightOfRightmost) {
+					immutable goal = (_curX + 8) & ~7;
+					_moveCursorTo(goal < _width ? goal : _width - 1, _curY);
+				}
 				break;
 			default:
 				onPrint(ch); // try to print anyway!
@@ -331,8 +350,10 @@ private:
 					n = 1;
 				}
 
-				immutable goal = (_curX + 8 * n) & ~7;
-				_moveCursorTo(goal < _width ? goal : _width - 1, _curY);
+				if (!_atRightOfRightmost) {
+					immutable goal = (_curX + 8 * n) & ~7;
+					_moveCursorTo(goal < _width ? goal : _width - 1, _curY);
+				}
 				break;
 			case 'J': // ED
 				switch (paramProcessor.collection[0]) {
@@ -349,9 +370,8 @@ private:
 					}
 					break;
 				case 2:
-					immutable x = _curX, y = _curY;
 					_scroll(_height);
-					_moveCursorTo(x, y);
+					_atRightOfRightmost = false; // according to behavior of xterm
 					break;
 				default:
 					break;
@@ -439,9 +459,7 @@ private:
 					n = 1;
 				}
 
-				immutable x = _curX, y = _curY;
 				_scroll(n);
-				_moveCursorTo(x, y);
 				break;
 			case 'T': // SD
 				// TODO: We should consider framebuffer scrolling.
@@ -697,13 +715,6 @@ private:
 		memmove(_screen.ptr, (_screen.VirtAddress + offset).ptr, _screen.length * FormattedChar.sizeof - offset);
 		for (size_t i = _screen.length - (lineCount * _width); i < _screen.length; i++)
 			_screen[i] = _clearChar;
-
-		ssize_t tmp = _curY - lineCount;
-		if (tmp < 0) {
-			_moveCursorTo(0, 0);
-		} else {
-			_moveCursorTo(_curX, tmp);
-		}
 	}
 
 	void _clear() {
@@ -714,6 +725,7 @@ private:
 	}
 
 	void _moveCursorTo(size_t x, size_t y) {
+		_atRightOfRightmost = false;
 		_curX = x;
 		_curY = y;
 	}
