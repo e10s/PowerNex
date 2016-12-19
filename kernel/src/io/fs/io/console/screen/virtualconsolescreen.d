@@ -19,6 +19,7 @@ public:
 
 		_lineStarts = new size_t[height];
 
+		_initializeTabStops();
 		_initializeParser();
 	}
 
@@ -176,6 +177,34 @@ private:
 
 	size_t[] _lineStarts;
 
+	bool[] _tabStops;
+
+	void _initializeTabStops() {
+		_tabStops = new bool[_width];
+
+		for (size_t x; x < _width; x += 8) {
+			_tabStops[x] = true;
+		}
+	}
+
+	@property size_t _nextTabStop() {
+		foreach (x; _curX + 1 .. _width) {
+			if (_tabStops[x]) {
+				return x;
+			}
+		}
+		return _width - 1;
+	}
+
+	@property size_t _prevTabStop() {
+		foreach_reverse (x; 0 .. _curX) {
+			if (_tabStops[x]) {
+				return x;
+			}
+		}
+		return 0;
+	}
+
 	ANSIEscapeParser _parser;
 
 	void _initializeParser() {
@@ -226,8 +255,7 @@ private:
 				break;
 			case '\t':
 				if (!_atRightOfRightmost) {
-					immutable goal = (_curX + 8) & ~7;
-					_moveCursorTo(goal < _width ? goal : _width - 1, _curY);
+					_moveCursorTo(_nextTabStop, _curY);
 				}
 				break;
 			default:
@@ -351,8 +379,9 @@ private:
 				}
 
 				if (!_atRightOfRightmost) {
-					immutable goal = (_curX + 8 * n) & ~7;
-					_moveCursorTo(goal < _width ? goal : _width - 1, _curY);
+					foreach (i; 0 .. n) {
+						_moveCursorTo(_nextTabStop, _curY);
+					}
 				}
 				break;
 			case 'J': // ED
@@ -497,7 +526,9 @@ private:
 					n = 1;
 				}
 
-				_moveCursorTo(_curX > 0 ? (_curX - 1) / n & ~7 : 0, _curY);
+				foreach (i; 0 .. n) {
+					_moveCursorTo(_prevTabStop, _curY);
+				}
 				break;
 			case 'd': // VPA
 				size_t y = paramProcessor.collection[0];
@@ -506,6 +537,18 @@ private:
 				}
 
 				_moveCursorTo(_curX, y < _height ? y : _height - 1);
+				break;
+			case 'g': // TBC
+				switch (paramProcessor.collection[0]) {
+				case 0:
+					_tabStops[_curX] = false;
+					break;
+				case 3:
+					_tabStops[] = false;
+					break;
+				default:
+					break;
+				}
 				break;
 			case 'm': // SGR
 				// TODO: Be more sophisticated!
