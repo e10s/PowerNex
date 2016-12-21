@@ -271,6 +271,9 @@ private:
 			case '\u0084': // IND
 				index();
 				break;
+			case '\u0088': // HTS
+				_tabStops[_curX] = true;
+				break;
 			default:
 				onPrint(ch); // try to print anyway!
 				break;
@@ -285,6 +288,9 @@ private:
 			switch (ch) {
 			case 'D': // IND
 				index();
+				break;
+			case 'H': // HTS
+				_tabStops[_curX] = true;
 				break;
 			default:
 				break;
