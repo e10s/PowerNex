@@ -210,6 +210,16 @@ private:
 	void _initializeParser() {
 		_parser = new ANSIEscapeParser;
 
+		// For IND
+		void index() {
+			if (_curY < _height - 1) {
+				_moveCursorTo(_curX, _curY + 1);
+			} else {
+				_scroll(1);
+				_atRightOfRightmost = false; // according to behavior of xterm
+			}
+		}
+
 		// TODO: Append more handlers
 		auto onPrint = delegate void(dchar ch) {
 			if (_atRightOfRightmost) {
@@ -258,13 +268,31 @@ private:
 					_moveCursorTo(_nextTabStop, _curY);
 				}
 				break;
+			case '\u0084': // IND
+				index();
+				break;
 			default:
 				onPrint(ch); // try to print anyway!
 				break;
 			}
 		};
 		_parser.onExecute = onExecute;
-		_parser.onCSIDispatch = delegate void(in CollectProcessor collectProcessor, in ParamProcessor paramProcessor, dchar ch) {
+		auto onEscDispatch = delegate void(in CollectProcessor collectProcessor, dchar ch) {
+			if (collectProcessor.collection.length) {
+				return;
+			}
+
+			switch (ch) {
+			case 'D': // IND
+				index();
+				break;
+			default:
+				break;
+			}
+
+		};
+		_parser.onEscDispatch = onEscDispatch;
+		auto onCSIDispatch = delegate void(in CollectProcessor collectProcessor, in ParamProcessor paramProcessor, dchar ch) {
 			// TODO: Add more functions
 			if (collectProcessor.collection.length) {
 				return;
@@ -655,6 +683,7 @@ private:
 				break;
 			}
 		};
+		_parser.onCSIDispatch = onCSIDispatch;
 	}
 
 	ref UTF8Range _prepareData(ref return UTF8Range str) {
