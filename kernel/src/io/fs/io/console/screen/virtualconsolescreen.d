@@ -220,6 +220,16 @@ private:
 			}
 		}
 
+		// For NEL and LF
+		void nextLine() {
+			if (_curY < _height - 1) {
+				_moveCursorTo(0, _curY + 1);
+			} else {
+				_moveCursorTo(0, _curY);
+				_scroll(1);
+			}
+		}
+
 		// TODO: Append more handlers
 		auto onPrint = delegate void(dchar ch) {
 			if (_atRightOfRightmost) {
@@ -247,13 +257,7 @@ private:
 		auto onExecute = delegate void(dchar ch) {
 			switch (ch) {
 			case '\n':
-				if (_curY == _height - 1) {
-					_moveCursorTo(0, _curY);
-					_scroll(1);
-				} else {
-					assert(_curY < _height - 1);
-					_moveCursorTo(0, _curY + 1);
-				}
+				nextLine(); // XXX: Implicitly something like "onlcr" of stty(1) is set so that this performs CR+LF...
 				break;
 			case '\r':
 				_moveCursorTo(0, _curY);
@@ -270,6 +274,9 @@ private:
 				break;
 			case '\u0084': // IND
 				index();
+				break;
+			case '\u0085': // NEL
+				nextLine();
 				break;
 			case '\u0088': // HTS
 				_tabStops[_curX] = true;
@@ -288,6 +295,9 @@ private:
 			switch (ch) {
 			case 'D': // IND
 				index();
+				break;
+			case 'E': // NEL
+				nextLine();
 				break;
 			case 'H': // HTS
 				_tabStops[_curX] = true;
