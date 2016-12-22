@@ -272,6 +272,8 @@ private:
 					_moveCursorTo(_nextTabStop, _curY);
 				}
 				break;
+			case '\f':
+			case '\v':
 			case '\u0084': // IND
 				index();
 				break;
