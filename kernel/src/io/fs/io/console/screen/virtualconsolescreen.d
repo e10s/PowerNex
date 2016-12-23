@@ -220,6 +220,16 @@ private:
 			}
 		}
 
+		// For RI
+		void reverseIndex() {
+			if (_curY) {
+				_moveCursorTo(_curX, _curY - 1);
+			} else {
+				_reverseScroll(1);
+				_atRightOfRightmost = false; // according to behavior of xterm
+			}
+		}
+
 		// For NEL and LF
 		void nextLine() {
 			if (_curY < _height - 1) {
@@ -283,6 +293,9 @@ private:
 			case '\u0088': // HTS
 				_tabStops[_curX] = true;
 				break;
+			case '\u008d': // RI
+				reverseIndex();
+				break;
 			default:
 				onPrint(ch); // try to print anyway!
 				break;
@@ -303,6 +316,9 @@ private:
 				break;
 			case 'H': // HTS
 				_tabStops[_curX] = true;
+				break;
+			case 'M': // RI
+				reverseIndex();
 				break;
 			default:
 				break;
@@ -537,22 +553,12 @@ private:
 				_scroll(n);
 				break;
 			case 'T': // SD
-				// TODO: We should consider framebuffer scrolling.
 				size_t n = paramProcessor.collection[0];
 				if (n == 0) {
 					n = 1;
 				}
 
-				immutable dstY = n > _height ? _height : n;
-				immutable dstOffset = FormattedChar.sizeof * (dstY * _width);
-				immutable size = FormattedChar.sizeof * (_height - dstY) * _width;
-				memmove((_screen.VirtAddress + dstOffset).ptr, _screen.ptr, size);
-				_screen[0 .. dstY * _width] = _clearChar;
-				foreach (y; 0 .. _height) {
-					foreach (x; 0 .. _width) {
-						updateChar(x, y);
-					}
-				}
+				_reverseScroll(n);
 				break;
 			case 'X': // ECH
 				size_t n = paramProcessor.collection[0];
@@ -805,6 +811,25 @@ private:
 		memmove(_screen.ptr, (_screen.VirtAddress + offset).ptr, _screen.length * FormattedChar.sizeof - offset);
 		for (size_t i = _screen.length - (lineCount * _width); i < _screen.length; i++)
 			_screen[i] = _clearChar;
+	}
+
+	void _reverseScroll(size_t lineCount) { // TODO: We should consider framebuffer scrolling.
+		if (lineCount > _height) {
+			lineCount = _height;
+		}
+
+		if (active) {
+			updateChar(_curX, _curY); // Remove cursor rendering
+		}
+
+		immutable offset = FormattedChar.sizeof * lineCount * _width;
+		memmove((_screen.VirtAddress + offset).ptr, _screen.ptr, _screen.length * FormattedChar.sizeof - offset);
+		_screen[0 .. lineCount * _width] = _clearChar;
+		foreach (y; 0 .. _height) {
+			foreach (x; 0 .. _width) {
+				updateChar(x, y);
+			}
+		}
 	}
 
 	void _clear() {
