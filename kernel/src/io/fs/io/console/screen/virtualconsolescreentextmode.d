@@ -22,6 +22,12 @@ protected:
 			_slots[i] = _toSlot(_clearChar);
 	}
 
+	override void onReverseScroll(size_t lineCount) {
+		immutable offset = Slot.sizeof * lineCount * _width;
+		memmove((_slots.VirtAddress + offset).ptr, _slots.ptr, _slots.length * Slot.sizeof - offset);
+		_slots[0 .. lineCount * _width] = _toSlot(_clearChar);
+	}
+
 	override void updateCursor() {
 		import io.port;
 

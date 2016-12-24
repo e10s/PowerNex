@@ -25,6 +25,14 @@ protected:
 		_fb.renderRect(0, rows, _fb.width, startRow, _clearChar.bg);
 	}
 
+	override void onReverseScroll(size_t lineCount) {
+		size_t dstRow = _font.height * lineCount;
+		size_t rows = _font.height * _height - dstRow;
+
+		_fb.moveRegion(0, dstRow, 0, 0, _fb.width, rows);
+		_fb.renderRect(0, 0, _fb.width, dstRow, _clearChar.bg);
+	}
+
 	override void updateCursor() {
 		FormattedChar ch = _screen[_curY * _width + _curX];
 		Color tmp = ch.fg;

@@ -159,6 +159,7 @@ protected:
 
 	// abstract void OnNewText(size_t startIdx, size_t length); //TODO: Use this instead of updateChar?
 	abstract void onScroll(size_t lineCount);
+	abstract void onReverseScroll(size_t lineCount);
 	abstract void updateCursor();
 	abstract void updateChar(size_t x, size_t y);
 
@@ -813,7 +814,7 @@ private:
 			_screen[i] = _clearChar;
 	}
 
-	void _reverseScroll(size_t lineCount) { // TODO: We should consider framebuffer scrolling.
+	void _reverseScroll(size_t lineCount) {
 		if (lineCount > _height) {
 			lineCount = _height;
 		}
@@ -822,14 +823,13 @@ private:
 			updateChar(_curX, _curY); // Remove cursor rendering
 		}
 
+		if (active) {
+			onReverseScroll(lineCount);
+		}
+
 		immutable offset = FormattedChar.sizeof * lineCount * _width;
 		memmove((_screen.VirtAddress + offset).ptr, _screen.ptr, _screen.length * FormattedChar.sizeof - offset);
 		_screen[0 .. lineCount * _width] = _clearChar;
-		foreach (y; 0 .. _height) {
-			foreach (x; 0 .. _width) {
-				updateChar(x, y);
-			}
-		}
 	}
 
 	void _clear() {
