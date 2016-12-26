@@ -14,6 +14,7 @@ public:
 				0x00, 0x00), CharStyle.none));
 		_fb = fb;
 		_font = font;
+		setCursorStyle(CursorShape.block, true);
 	}
 
 protected:
@@ -33,13 +34,39 @@ protected:
 		_fb.renderRect(0, 0, _fb.width, dstRow, _clearChar.bg);
 	}
 
+	override void setCursorStyle(CursorShape cursorShape, bool shouldBlink) { // `shouldBlink` is ignored.
+		_cursorShape = cursorShape;
+		updateCursor();
+	}
+
 	override void updateCursor() {
 		FormattedChar ch = _screen[_curY * _width + _curX];
-		Color tmp = ch.fg;
-		ch.fg = ch.bg;
-		ch.bg = tmp;
 
-		_fb.renderChar(_font, ch.ch, _curX * _font.width, _curY * _font.height, ch.fg, ch.bg);
+		switch (_cursorShape) {
+		case CursorShape.block:
+			Color tmp = ch.fg;
+			ch.fg = ch.bg;
+			ch.bg = tmp;
+			_fb.renderChar(_font, ch.ch, _curX * _font.width, _curY * _font.height, ch.fg, ch.bg);
+			break;
+		case CursorShape.underline:
+			_fb.renderChar(_font, ch.ch, _curX * _font.width, _curY * _font.height, ch.fg, ch.bg);
+
+			enum size_t underlineHeight = 2;
+			_fb.renderRect(_curX * _font.width, (_curY + 1) * _font.height - underlineHeight, _font.width, underlineHeight, ch.fg);
+			break;
+		case CursorShape.bar:
+			_fb.renderChar(_font, ch.ch, _curX * _font.width, _curY * _font.height, ch.fg, ch.bg);
+
+			if (!_atRightOfRightmost) {
+				_fb.renderLine(_curX * _font.width, _curY * _font.height, _curX * _font.width, (_curY + 1) * _font.height - 1, ch.fg);
+			}
+			break;
+		default:
+			assert(0);
+			break;
+		}
+
 	}
 
 	override void updateChar(size_t x, size_t y) {
@@ -53,6 +80,7 @@ protected:
 	}
 
 private:
+	CursorShape _cursorShape;
 	Framebuffer _fb;
 	Font _font;
 

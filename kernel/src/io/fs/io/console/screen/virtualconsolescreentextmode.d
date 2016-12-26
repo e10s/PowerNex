@@ -12,6 +12,7 @@ public:
 	this() {
 		super(80, 25, FormattedChar(' ', Color(0xFF, 0xFF, 0xFF), Color(0x00, 0x00, 0x00), CharStyle.none));
 		_slots = VirtAddress(0xFFFF_FFFF_800B_8000).ptr!Slot[0 .. _width * _height];
+		setCursorStyle(CursorShape.block, true);
 	}
 
 protected:
@@ -26,6 +27,36 @@ protected:
 		immutable offset = Slot.sizeof * lineCount * _width;
 		memmove((_slots.VirtAddress + offset).ptr, _slots.ptr, _slots.length * Slot.sizeof - offset);
 		_slots[0 .. lineCount * _width] = _toSlot(_clearChar);
+	}
+
+	override void setCursorStyle(CursorShape cursorShape, bool shouldBlink) { // `shouldBlink` is ignored.
+		import io.port;
+
+		ubyte cursorDisable = 0 << 5; // enabled
+
+		switch (cursorShape) {
+		case CursorShape.block:
+			outp!ubyte(0x3D4, 9);
+			immutable ubyte cursorStart = inp!ubyte(0x3D5);
+			immutable ubyte maxScanLine = cursorStart & 0x1F;
+			outp!ubyte(0x3D4, 10);
+			outp!ubyte(0x3D5, cursorDisable);
+			outp!ubyte(0x3D4, 11);
+			outp!ubyte(0x3D5, cast(ubyte)maxScanLine);
+			break;
+		case CursorShape.underline:
+			enum ubyte underlineHeight = 2;
+			outp!ubyte(0x3D4, 9);
+			immutable ubyte cursorStart = inp!ubyte(0x3D5);
+			immutable ubyte maxScanLine = cursorStart & 0x1F;
+			outp!ubyte(0x3D4, 10);
+			outp!ubyte(0x3D5, cast(ubyte)((maxScanLine - (underlineHeight - 1)) | cursorDisable));
+			outp!ubyte(0x3D4, 11);
+			outp!ubyte(0x3D5, cast(ubyte)maxScanLine);
+			break;
+		default:
+			break;
+		}
 	}
 
 	override void updateCursor() {

@@ -157,13 +157,6 @@ protected:
 		return __bgColor;
 	}
 
-	// abstract void OnNewText(size_t startIdx, size_t length); //TODO: Use this instead of updateChar?
-	abstract void onScroll(size_t lineCount);
-	abstract void onReverseScroll(size_t lineCount);
-	abstract void updateCursor();
-	abstract void updateChar(size_t x, size_t y);
-
-private:
 	/**
 	 * Used to emulate VT100/xterm.
 	 * This will become true right after a character is put onto the rightmost column.
@@ -172,6 +165,20 @@ private:
 	 */
 	bool _atRightOfRightmost;
 
+	enum CursorShape {
+		block,
+		underline,
+		bar // unsupported by the text mode
+	}
+
+	// abstract void OnNewText(size_t startIdx, size_t length); //TODO: Use this instead of updateChar?
+	abstract void onScroll(size_t lineCount);
+	abstract void onReverseScroll(size_t lineCount);
+	abstract void setCursorStyle(CursorShape cursorShape, bool shouldBlink);
+	abstract void updateCursor();
+	abstract void updateChar(size_t x, size_t y);
+
+private:
 	Color __bgColor;
 	bool _inUse;
 	bool _active;
@@ -330,6 +337,37 @@ private:
 		auto onCSIDispatch = delegate void(in CollectProcessor collectProcessor, in ParamProcessor paramProcessor, dchar ch) {
 			// TODO: Add more functions
 			if (collectProcessor.collection.length) {
+				if (collectProcessor.collection == " ") {
+					switch (ch) {
+					case 'q': // DECSCUSR
+						switch (paramProcessor.collection[0]) {
+						case 0:
+						case 1:
+							setCursorStyle(CursorShape.block, true);
+							break;
+						case 2:
+							setCursorStyle(CursorShape.block, false);
+							break;
+						case 3:
+							setCursorStyle(CursorShape.underline, true);
+							break;
+						case 4:
+							setCursorStyle(CursorShape.underline, false);
+							break;
+						case 5: // xterm extension
+							setCursorStyle(CursorShape.bar, true);
+							break;
+						case 6: // xterm extension
+							setCursorStyle(CursorShape.bar, false);
+							break;
+						default:
+							break;
+						}
+						break;
+					default:
+						break;
+					}
+				}
 				return;
 			}
 
