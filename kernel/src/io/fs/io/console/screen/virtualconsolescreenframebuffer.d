@@ -19,19 +19,21 @@ public:
 
 protected:
 	override void onScroll(size_t lineCount) {
-		size_t startRow = _font.height * lineCount;
-		size_t rows = _font.height * _height - startRow;
+		size_t dstRow = _font.height * _topMargin;
+		size_t srcRow = _font.height * (_topMargin + lineCount);
+		size_t rows = _font.height * (_bottomMargin + 1) - srcRow;
 
-		_fb.moveRegion(0, 0, 0, startRow, _fb.width, rows);
-		_fb.renderRect(0, rows, _fb.width, startRow, _clearChar.bg);
+		_fb.moveRegion(0, dstRow, 0, srcRow, _fb.width, rows);
+		_fb.renderRect(0, dstRow + rows, _fb.width, srcRow - dstRow, _clearChar.bg);
 	}
 
 	override void onReverseScroll(size_t lineCount) {
-		size_t dstRow = _font.height * lineCount;
-		size_t rows = _font.height * _height - dstRow;
+		size_t dstRow = _font.height * (_topMargin + lineCount);
+		size_t srcRow = _font.height * _topMargin;
+		size_t rows = _font.height * (_bottomMargin + 1) - dstRow;
 
-		_fb.moveRegion(0, dstRow, 0, 0, _fb.width, rows);
-		_fb.renderRect(0, 0, _fb.width, dstRow, _clearChar.bg);
+		_fb.moveRegion(0, dstRow, 0, srcRow, _fb.width, rows);
+		_fb.renderRect(0, srcRow, _fb.width, dstRow - srcRow, _clearChar.bg);
 	}
 
 	override void setCursorStyle(CursorShape cursorShape, bool shouldBlink) { // `shouldBlink` is ignored.

@@ -12,6 +12,8 @@ public:
 		super(NodePermissions.defaultPermissions, 0);
 		_width = width;
 		_height = height;
+		_topMargin = 0;
+		_bottomMargin = height - 1;
 		_clearChar = clearChar;
 		_screen = new FormattedChar[width * height];
 		for (size_t i = 0; i < _screen.length; i++)
@@ -144,6 +146,8 @@ protected:
 	size_t _height;
 	size_t _curX;
 	size_t _curY;
+	size_t _topMargin;
+	size_t _bottomMargin; // Must be larger than _topMargin
 
 	Color _fgColor = Color(255, 255, 255);
 
@@ -220,40 +224,48 @@ private:
 
 		// For IND
 		void index() {
-			if (_curY < _height - 1) {
-				_moveCursorTo(_curX, _curY + 1);
-			} else {
+			if (_curY == _bottomMargin) {
 				_scroll(1);
 				_atRightOfRightmost = false; // according to behavior of xterm
+			} else if (_curY == _height - 1) {
+				// noop
+			} else {
+				_moveCursorTo(_curX, _curY + 1);
 			}
 		}
 
 		// For RI
 		void reverseIndex() {
-			if (_curY) {
-				_moveCursorTo(_curX, _curY - 1);
-			} else {
+			if (_curY == _topMargin) {
 				_reverseScroll(1);
 				_atRightOfRightmost = false; // according to behavior of xterm
+			} else if (_curY == 0) {
+				// noop
+			} else {
+				_moveCursorTo(_curX, _curY - 1);
 			}
 		}
 
 		// For NEL and LF
 		void nextLine() {
-			if (_curY < _height - 1) {
-				_moveCursorTo(0, _curY + 1);
-			} else {
+			if (_curY == _bottomMargin) {
 				_moveCursorTo(0, _curY);
 				_scroll(1);
+			} else if (_curY == _height - 1) {
+				_moveCursorTo(0, _curY);
+			} else {
+				_moveCursorTo(0, _curY + 1);
 			}
 		}
 
 		// TODO: Append more handlers
 		auto onPrint = delegate void(dchar ch) {
 			if (_atRightOfRightmost) {
-				if (_curY == _height - 1) {
+				if (_curY == _bottomMargin) {
 					_moveCursorTo(0, _curY);
 					_scroll(1);
+				} else if (_curY == _height - 1) {
+					_moveCursorTo(0, _curY);
 				} else {
 					assert(_curY < _height - 1);
 					_moveCursorTo(0, _curY + 1);
@@ -262,13 +274,12 @@ private:
 			_screen[_curY * _width + _curX] = FormattedChar(ch, _fgColor, _bgColor, CharStyle.none);
 			if (active)
 				updateChar(_curX, _curY);
-			immutable tmp = _curX + 1;
-			if (tmp >= _width) {
+			if (_curX + 1 == _width) {
 				// The cursor is "temporarily" kept at the rightmost column to prepare for next action.
-				_moveCursorTo(_width - 1, _curY);
 				_atRightOfRightmost = true;
 			} else {
-				_moveCursorTo(tmp, _curY);
+				assert(_curX < _width - 1);
+				_moveCursorTo(_curX + 1, _curY);
 			}
 		};
 		_parser.onPrint = onPrint;
@@ -396,10 +407,12 @@ private:
 					dy = 1;
 				}
 
-				if (_curY >= dy) {
+				immutable topRow = _curY < _topMargin ? 0 : _topMargin;
+
+				if (_curY >= topRow + dy) {
 					_moveCursorTo(_curX, _curY - dy);
 				} else {
-					_moveCursorTo(_curX, 0);
+					_moveCursorTo(_curX, topRow);
 				}
 				break;
 			case 'B': // CUD
@@ -409,10 +422,12 @@ private:
 					dy = 1;
 				}
 
-				if (_curY + dy <= _height - 1) {
+				immutable bottomRow = _curY > _bottomMargin ? _height - 1 : _bottomMargin;
+
+				if (_curY + dy <= bottomRow) {
 					_moveCursorTo(_curX, _curY + dy);
 				} else {
-					_moveCursorTo(_curX, _height - 1);
+					_moveCursorTo(_curX, bottomRow);
 				}
 				break;
 			case 'C': // CUF
@@ -532,36 +547,44 @@ private:
 				}
 				break;
 			case 'L': // IL
+				if (_curY < _topMargin || _bottomMargin < _curY) {
+					break;
+				}
+
 				size_t n = paramProcessor.collection[0];
 				if (n == 0) {
 					n = 1;
 				}
 
-				immutable dstY = _curY + n > _height ? _height : _curY + n;
+				immutable dstY = _curY + n > _bottomMargin + 1 ? _bottomMargin + 1 : _curY + n;
 				immutable dstOffset = FormattedChar.sizeof * (dstY * _width);
 				immutable srcOffset = FormattedChar.sizeof * (_curY * _width);
-				immutable size = FormattedChar.sizeof * (_height - dstY) * _width;
+				immutable size = FormattedChar.sizeof * (_bottomMargin + 1 - dstY) * _width;
 				memmove((_screen.VirtAddress + dstOffset).ptr, (_screen.VirtAddress + srcOffset).ptr, size);
 				_screen[_curY * _width .. dstY * _width] = _clearChar;
-				foreach (y; _curY .. _height) {
+				foreach (y; _curY .. _bottomMargin + 1) {
 					foreach (x; 0 .. _width) {
 						updateChar(x, y);
 					}
 				}
 				break;
 			case 'M': // DL
+				if (_curY < _topMargin || _bottomMargin < _curY) {
+					break;
+				}
+
 				size_t n = paramProcessor.collection[0];
 				if (n == 0) {
 					n = 1;
 				}
 
-				immutable srcY = _curY + n > _height ? _height : _curY + n;
+				immutable srcY = _curY + n > _bottomMargin + 1 ? _bottomMargin + 1 : _curY + n;
 				immutable dstOffset = FormattedChar.sizeof * (_curY * _width);
 				immutable srcOffset = FormattedChar.sizeof * (srcY * _width);
-				immutable size = FormattedChar.sizeof * (_height - srcY) * _width;
+				immutable size = FormattedChar.sizeof * (_bottomMargin + 1 - srcY) * _width;
 				memmove((_screen.VirtAddress + dstOffset).ptr, (_screen.VirtAddress + srcOffset).ptr, size);
-				_screen[(_height - srcY + _curY) * _width .. _height * _width] = _clearChar;
-				foreach (y; _curY .. _height) {
+				_screen[(_bottomMargin + 1 - srcY + _curY) * _width .. (_bottomMargin + 1) * _width] = _clearChar;
+				foreach (y; _curY .. _bottomMargin + 1) {
 					foreach (x; 0 .. _width) {
 						updateChar(x, y);
 					}
@@ -837,25 +860,27 @@ private:
 	}
 
 	void _scroll(size_t lineCount) {
-		if (lineCount > _height)
-			lineCount = _height;
+		immutable scrollingRegionHeight = _bottomMargin - _topMargin + 1;
+		immutable n = lineCount > scrollingRegionHeight ? scrollingRegionHeight : lineCount;
 
-		if (active)
+		if (active) {
 			updateChar(_curX, _curY); // Remove cursor rendering
+		}
 
-		if (active)
-			onScroll(lineCount);
+		if (active) {
+			onScroll(n);
+		}
 
-		size_t offset = FormattedChar.sizeof * lineCount * _width;
-		memmove(_screen.ptr, (_screen.VirtAddress + offset).ptr, _screen.length * FormattedChar.sizeof - offset);
-		for (size_t i = _screen.length - (lineCount * _width); i < _screen.length; i++)
-			_screen[i] = _clearChar;
+		immutable dstOffset = FormattedChar.sizeof * _topMargin * _width;
+		immutable srcOffset = FormattedChar.sizeof * (_topMargin + n) * _width;
+		immutable size = FormattedChar.sizeof * (_bottomMargin + 1) * _width - srcOffset;
+		memmove((_screen.VirtAddress + dstOffset).ptr, (_screen.VirtAddress + srcOffset).ptr, size);
+		_screen[(_bottomMargin + 1 - n) * _width .. (_bottomMargin + 1) * _width] = _clearChar;
 	}
 
 	void _reverseScroll(size_t lineCount) {
-		if (lineCount > _height) {
-			lineCount = _height;
-		}
+		immutable scrollingRegionHeight = _bottomMargin - _topMargin + 1;
+		immutable n = lineCount > scrollingRegionHeight ? scrollingRegionHeight : lineCount;
 
 		if (active) {
 			updateChar(_curX, _curY); // Remove cursor rendering
@@ -865,9 +890,11 @@ private:
 			onReverseScroll(lineCount);
 		}
 
-		immutable offset = FormattedChar.sizeof * lineCount * _width;
-		memmove((_screen.VirtAddress + offset).ptr, _screen.ptr, _screen.length * FormattedChar.sizeof - offset);
-		_screen[0 .. lineCount * _width] = _clearChar;
+		immutable dstOffset = FormattedChar.sizeof * (_topMargin + n) * _width;
+		immutable srcOffset = FormattedChar.sizeof * _topMargin * _width;
+		immutable size = FormattedChar.sizeof * (_bottomMargin + 1) * _width - dstOffset;
+		memmove((_screen.VirtAddress + dstOffset).ptr, (_screen.VirtAddress + srcOffset).ptr, size);
+		_screen[_topMargin * _width .. (_topMargin + n) * _width] = _clearChar;
 	}
 
 	void _clear() {

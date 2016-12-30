@@ -17,16 +17,19 @@ public:
 
 protected:
 	override void onScroll(size_t lineCount) {
-		size_t offset = Slot.sizeof * lineCount * _width;
-		memmove(_slots.ptr, (_slots.VirtAddress + offset).ptr, _slots.length * Slot.sizeof - offset);
-		for (size_t i = _slots.length - (lineCount * _width); i < _slots.length; i++)
-			_slots[i] = _toSlot(_clearChar);
+		size_t dstOffset = Slot.sizeof * _topMargin * _width;
+		size_t srcOffset = Slot.sizeof * (_topMargin + lineCount) * _width;
+		size_t size = Slot.sizeof * (_bottomMargin + 1) * _width - srcOffset;
+		memmove((_slots.VirtAddress + dstOffset).ptr, (_slots.VirtAddress + srcOffset).ptr, size);
+		_slots[(_bottomMargin + 1 - lineCount) * _width .. (_bottomMargin + 1) * _width] = _toSlot(_clearChar);
 	}
 
 	override void onReverseScroll(size_t lineCount) {
-		immutable offset = Slot.sizeof * lineCount * _width;
-		memmove((_slots.VirtAddress + offset).ptr, _slots.ptr, _slots.length * Slot.sizeof - offset);
-		_slots[0 .. lineCount * _width] = _toSlot(_clearChar);
+		size_t dstOffset = Slot.sizeof * (_topMargin + lineCount) * _width;
+		size_t srcOffset = Slot.sizeof * _topMargin * _width;
+		size_t size = Slot.sizeof * (_bottomMargin + 1) * _width - dstOffset;
+		memmove((_slots.VirtAddress + dstOffset).ptr, (_slots.VirtAddress + srcOffset).ptr, size);
+		_slots[_topMargin * _width .. (_topMargin + lineCount) * _width] = _toSlot(_clearChar);
 	}
 
 	override void setCursorStyle(CursorShape cursorShape, bool shouldBlink) { // `shouldBlink` is ignored.
