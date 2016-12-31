@@ -556,16 +556,16 @@ private:
 					n = 1;
 				}
 
-				immutable dstY = _curY + n > _bottomMargin + 1 ? _bottomMargin + 1 : _curY + n;
-				immutable dstOffset = FormattedChar.sizeof * (dstY * _width);
-				immutable srcOffset = FormattedChar.sizeof * (_curY * _width);
-				immutable size = FormattedChar.sizeof * (_bottomMargin + 1 - dstY) * _width;
-				memmove((_screen.VirtAddress + dstOffset).ptr, (_screen.VirtAddress + srcOffset).ptr, size);
-				_screen[_curY * _width .. dstY * _width] = _clearChar;
-				foreach (y; _curY .. _bottomMargin + 1) {
+				if (_curY == _bottomMargin) {
+					_screen[_curY * _width .. _curY * _width + _width] = _clearChar;
 					foreach (x; 0 .. _width) {
-						updateChar(x, y);
+						updateChar(x, _curY);
 					}
+				} else {
+					auto tmp = _topMargin;
+					_topMargin = _curY;
+					_reverseScroll(n);
+					_topMargin = tmp;
 				}
 				break;
 			case 'M': // DL
@@ -578,16 +578,16 @@ private:
 					n = 1;
 				}
 
-				immutable srcY = _curY + n > _bottomMargin + 1 ? _bottomMargin + 1 : _curY + n;
-				immutable dstOffset = FormattedChar.sizeof * (_curY * _width);
-				immutable srcOffset = FormattedChar.sizeof * (srcY * _width);
-				immutable size = FormattedChar.sizeof * (_bottomMargin + 1 - srcY) * _width;
-				memmove((_screen.VirtAddress + dstOffset).ptr, (_screen.VirtAddress + srcOffset).ptr, size);
-				_screen[(_bottomMargin + 1 - srcY + _curY) * _width .. (_bottomMargin + 1) * _width] = _clearChar;
-				foreach (y; _curY .. _bottomMargin + 1) {
+				if (_curY == _bottomMargin) {
+					_screen[_curY * _width .. _curY * _width + _width] = _clearChar;
 					foreach (x; 0 .. _width) {
-						updateChar(x, y);
+						updateChar(x, _curY);
 					}
+				} else {
+					auto tmp = _topMargin;
+					_topMargin = _curY;
+					_scroll(n);
+					_topMargin = tmp;
 				}
 				break;
 			case 'P': // DCH
