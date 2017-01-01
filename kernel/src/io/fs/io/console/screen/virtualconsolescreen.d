@@ -765,6 +765,26 @@ private:
 					}
 				}
 				break;
+			case 'r': // DECSTBM
+				size_t topMargin = paramProcessor.collection[0];
+				if (topMargin > 0) {
+					topMargin--;
+				}
+
+				size_t bottomMargin = _height - 1;
+				if (paramProcessor.collection.length > 1) {
+					size_t tmp = paramProcessor.collection[1];
+					if (tmp > 0 && tmp <= _height) {
+						bottomMargin = tmp - 1;
+					}
+				}
+
+				if (topMargin < bottomMargin) {
+					_topMargin = topMargin;
+					_bottomMargin = bottomMargin;
+					_moveCursorTo(0, 0);
+				}
+				break;
 			default:
 				break;
 			}
