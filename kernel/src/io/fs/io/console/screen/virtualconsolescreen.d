@@ -184,6 +184,10 @@ protected:
 
 private:
 	Color __bgColor;
+	size_t _savedX;
+	size_t _savedY;
+	Color _savedFGColor = Color(255, 255, 255);
+	Color _savedBGColor;
 	bool _inUse;
 	bool _active;
 
@@ -327,6 +331,17 @@ private:
 			}
 
 			switch (ch) {
+			case '7': // DECSC
+				_savedX = _curX;
+				_savedY = _curY;
+				_savedFGColor = _fgColor;
+				_savedBGColor = _bgColor;
+				break;
+			case '8': // DECRC
+				_moveCursorTo(_savedX, _savedY);
+				_fgColor = _savedFGColor;
+				_bgColor = _savedBGColor;
+				break;
 			case 'D': // IND
 				index();
 				break;
