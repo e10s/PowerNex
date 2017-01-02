@@ -46,7 +46,7 @@ int main(string[] args) {
 		BasicShell bs = new BasicShell();
 		bs.mainLoop();
 		bs.destroy;
-		println("\x1B[2J");
+		println("\x1Bc"); // reset
 	}
 
 	return 0;
@@ -150,7 +150,7 @@ private:
 			break;
 
 		case "clear":
-			println("\x1B[2J");
+			println("\x1B[2J\x1B[H"); // clear all and home
 			break;
 
 		case "echo":
@@ -186,8 +186,8 @@ private:
 
 			println("ID\tName\t\tType");
 
-			while(count == listings.length) {
-				if(cmd.args.length == 1)
+			while (count == listings.length) {
+				if (cmd.args.length == 1)
 					count = Syscall.listDirectory(null, ptr, listings.length, curr);
 				else
 					count = Syscall.listDirectory(cast(string)cmd.args[1], ptr, listings.length, curr);
