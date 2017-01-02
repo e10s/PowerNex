@@ -202,6 +202,9 @@ private:
 	bool[] _tabStops;
 
 	void _initializeTabStops() {
+		if (_tabStops) {
+			_tabStops.destroy;
+		}
 		_tabStops = new bool[_width];
 
 		for (size_t x; x < _width; x += 8) {
@@ -230,6 +233,9 @@ private:
 	ANSIEscapeParser _parser;
 
 	void _initializeParser() {
+		if (_parser) {
+			_parser.destroy;
+		}
 		_parser = new ANSIEscapeParser;
 
 		// For IND
@@ -376,6 +382,9 @@ private:
 				break;
 			case 'M': // RI
 				reverseIndex();
+				break;
+			case 'c': // RIS
+				_reset();
 				break;
 			default:
 				break;
@@ -960,6 +969,26 @@ private:
 		_curX = _curY = 0;
 		if (active)
 			updateCursor();
+	}
+
+	void _reset() {
+		_fgColor = _defaultStyle.fg;
+		_bgColor = _defaultStyle.bg;
+		_savedFGColor = _defaultStyle.fg;
+		_savedBGColor = _defaultStyle.bg;
+		_topMargin = 0;
+		_bottomMargin = _height - 1;
+		foreach (y; 0 .. _height) {
+			foreach (x; 0 .. _width) {
+				_screen[y * _width + x] = _clearChar;
+				updateChar(x, y);
+			}
+		}
+
+		_initializeTabStops();
+		_initializeParser();
+
+		_moveCursorTo(0, 0);
 	}
 
 	void _moveCursorTo(size_t x, size_t y) {
