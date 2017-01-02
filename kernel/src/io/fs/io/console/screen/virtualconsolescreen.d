@@ -12,6 +12,11 @@ public:
 		super(NodePermissions.defaultPermissions, 0);
 		_width = width;
 		_height = height;
+		_defaultStyle = clearChar;
+		_fgColor = clearChar.fg;
+		_bgColor = clearChar.bg;
+		_savedFGColor = clearChar.fg;
+		_savedBGColor = clearChar.bg;
 		_topMargin = 0;
 		_bottomMargin = height - 1;
 		_clearChar = clearChar;
@@ -149,7 +154,7 @@ protected:
 	size_t _topMargin;
 	size_t _bottomMargin; // Must be larger than _topMargin
 
-	Color _fgColor = Color(255, 255, 255);
+	Color _fgColor;
 
 	@property ref Color _bgColor(Color bgColor) {
 		__bgColor = bgColor;
@@ -183,10 +188,11 @@ protected:
 	abstract void updateChar(size_t x, size_t y);
 
 private:
+	const FormattedChar _defaultStyle;
 	Color __bgColor;
 	size_t _savedX;
 	size_t _savedY;
-	Color _savedFGColor = Color(255, 255, 255);
+	Color _savedFGColor;
 	Color _savedBGColor;
 	bool _inUse;
 	bool _active;
@@ -327,6 +333,23 @@ private:
 		_parser.onExecute = onExecute;
 		auto onEscDispatch = delegate void(in CollectProcessor collectProcessor, dchar ch) {
 			if (collectProcessor.collection.length) {
+				if (collectProcessor.collection == "#") {
+					switch (ch) {
+					case '8': // DECALN
+						_topMargin = 0;
+						_bottomMargin = _height - 1;
+						_moveCursorTo(0, 0);
+						_screen[] = FormattedChar('E', _defaultStyle.fg, _defaultStyle.bg, _defaultStyle.style);
+						foreach (y; 0 .. _height) {
+							foreach (x; 0 .. _width) {
+								updateChar(x, y);
+							}
+						}
+						break;
+					default:
+						break;
+					}
+				}
 				return;
 			}
 
@@ -695,8 +718,8 @@ private:
 
 					switch (e) {
 					case 0:
-						_fgColor = Color(255, 255, 255);
-						_bgColor = Color();
+						_fgColor = _defaultStyle.fg;
+						_bgColor = _defaultStyle.bg;
 						// In addition reset style
 						break;
 					case 30: .. case 37:
@@ -731,7 +754,7 @@ private:
 						}
 						break;
 					case 39:
-						_fgColor = Color(255, 255, 255);
+						_fgColor = _defaultStyle.fg;
 						break;
 					case 40: .. case 47:
 						_bgColor = vgaColorPalette[e - 40];
@@ -767,7 +790,7 @@ private:
 						}
 						break;
 					case 49:
-						_bgColor = Color();
+						_bgColor = _defaultStyle.bg;
 						break;
 					case 90: .. case 97:
 						_fgColor = vgaColorPalette[e - 90 + 8];
