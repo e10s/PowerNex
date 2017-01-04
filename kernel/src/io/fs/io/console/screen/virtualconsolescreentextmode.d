@@ -12,6 +12,7 @@ public:
 	this() {
 		super(80, 25, FormattedChar(' ', Color(0xFF, 0xFF, 0xFF), Color(0x00, 0x00, 0x00), CharStyle.none));
 		_slots = VirtAddress(0xFFFF_FFFF_800B_8000).ptr!Slot[0 .. _width * _height];
+		setCursorVisibility(true);
 		setCursorStyle(CursorShape.block, true);
 	}
 
@@ -32,30 +33,41 @@ protected:
 		_slots[_topMargin * _width .. (_topMargin + lineCount) * _width] = _toSlot(_clearChar);
 	}
 
-	override void setCursorStyle(CursorShape cursorShape, bool shouldBlink) { // `shouldBlink` is ignored.
+	override void setCursorVisibility(bool visible) {
 		import io.port;
 
-		ubyte cursorDisable = 0 << 5; // enabled
+		immutable ubyte cursorDisable = visible ? 0 << 5 : 1 << 5;
+
+		outp!ubyte(0x3D4, 10);
+		immutable ubyte cursorStart = inp!ubyte(0x3D5) & 0x1F | cursorDisable;
+		outp!ubyte(0x3D4, 10);
+		outp!ubyte(0x3D5, cursorStart);
+	}
+
+	override void setCursorStyle(CursorShape cursorShape, bool shouldBlink) { // `shouldBlink` is ignored.
+		import io.port;
 
 		switch (cursorShape) {
 		case CursorShape.block:
 			outp!ubyte(0x3D4, 9);
-			immutable ubyte cursorStart = inp!ubyte(0x3D5);
-			immutable ubyte maxScanLine = cursorStart & 0x1F;
+			immutable ubyte maxScanLine = inp!ubyte(0x3D5) & 0x1F;
+			outp!ubyte(0x3D4, 10);
+			immutable ubyte cursorDisable = inp!ubyte(0x3D5) & 0x20;
 			outp!ubyte(0x3D4, 10);
 			outp!ubyte(0x3D5, cursorDisable);
 			outp!ubyte(0x3D4, 11);
-			outp!ubyte(0x3D5, cast(ubyte)maxScanLine);
+			outp!ubyte(0x3D5, maxScanLine);
 			break;
 		case CursorShape.underline:
 			enum ubyte underlineHeight = 2;
 			outp!ubyte(0x3D4, 9);
-			immutable ubyte cursorStart = inp!ubyte(0x3D5);
-			immutable ubyte maxScanLine = cursorStart & 0x1F;
+			immutable ubyte maxScanLine = inp!ubyte(0x3D5) & 0x1F;
+			outp!ubyte(0x3D4, 10);
+			immutable ubyte cursorDisable = inp!ubyte(0x3D5) & 0x20;
 			outp!ubyte(0x3D4, 10);
 			outp!ubyte(0x3D5, cast(ubyte)((maxScanLine - (underlineHeight - 1)) | cursorDisable));
 			outp!ubyte(0x3D4, 11);
-			outp!ubyte(0x3D5, cast(ubyte)maxScanLine);
+			outp!ubyte(0x3D5, maxScanLine);
 			break;
 		default:
 			break;

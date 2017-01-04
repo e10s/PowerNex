@@ -183,6 +183,7 @@ protected:
 	// abstract void OnNewText(size_t startIdx, size_t length); //TODO: Use this instead of updateChar?
 	abstract void onScroll(size_t lineCount);
 	abstract void onReverseScroll(size_t lineCount);
+	abstract void setCursorVisibility(bool visible);
 	abstract void setCursorStyle(CursorShape cursorShape, bool shouldBlink);
 	abstract void updateCursor();
 	abstract void updateChar(size_t x, size_t y);
@@ -420,6 +421,33 @@ private:
 							break;
 						default:
 							break;
+						}
+						break;
+					default:
+						break;
+					}
+				} else if (collectProcessor.collection == "?") {
+					switch (ch) {
+					case 'h': // DECSET
+						foreach (param; paramProcessor.collection) {
+							switch (param) {
+							case 25: // DECTCEM
+								setCursorVisibility(true);
+								break;
+							default:
+								break;
+							}
+						}
+						break;
+					case 'l': // DECRST
+						foreach (param; paramProcessor.collection) {
+							switch (param) {
+							case 25: // DECTCEM
+								setCursorVisibility(false);
+								break;
+							default:
+								break;
+							}
 						}
 						break;
 					default:

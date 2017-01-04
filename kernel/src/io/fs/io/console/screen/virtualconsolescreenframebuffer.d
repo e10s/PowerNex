@@ -14,6 +14,7 @@ public:
 				0x00, 0x00), CharStyle.none));
 		_fb = fb;
 		_font = font;
+		setCursorVisibility(true);
 		setCursorStyle(CursorShape.block, true);
 	}
 
@@ -36,6 +37,15 @@ protected:
 		_fb.renderRect(0, srcRow, _fb.width, dstRow - srcRow, _clearChar.bg);
 	}
 
+	override void setCursorVisibility(bool visible) {
+		if (visible == _cursorVisible) {
+			return;
+		}
+
+		_cursorVisible = visible;
+		updateCursor();
+	}
+
 	override void setCursorStyle(CursorShape cursorShape, bool shouldBlink) { // `shouldBlink` is ignored.
 		_cursorShape = cursorShape;
 		updateCursor();
@@ -43,6 +53,11 @@ protected:
 
 	override void updateCursor() {
 		FormattedChar ch = _screen[_curY * _width + _curX];
+
+		if (!_cursorVisible) {
+			_fb.renderChar(_font, ch.ch, _curX * _font.width, _curY * _font.height, ch.fg, ch.bg);
+			return;
+		}
 
 		switch (_cursorShape) {
 		case CursorShape.block:
@@ -83,6 +98,7 @@ protected:
 
 private:
 	CursorShape _cursorShape;
+	bool _cursorVisible;
 	Framebuffer _fb;
 	Font _font;
 
