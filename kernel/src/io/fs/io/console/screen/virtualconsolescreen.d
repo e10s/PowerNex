@@ -195,6 +195,8 @@ private:
 	size_t _savedY;
 	Color _savedFGColor;
 	Color _savedBGColor;
+	bool _negativeImage;
+	bool _savedNegativeImage;
 	bool _inUse;
 	bool _active;
 
@@ -369,7 +371,14 @@ private:
 			case 0:
 				_fgColor = _defaultStyle.fg;
 				_bgColor = _defaultStyle.bg;
+				_negativeImage = false;
 				// In addition reset style
+				break;
+			case 7:
+				_negativeImage = true;
+				break;
+			case 27:
+				_negativeImage = false;
 				break;
 			case 30: .. case 37:
 				_fgColor = vgaColorPalette[e - 30];
@@ -739,6 +748,8 @@ private:
 		_bgColor = _defaultStyle.bg;
 		_savedFGColor = _defaultStyle.fg;
 		_savedBGColor = _defaultStyle.bg;
+		_negativeImage = false;
+		_savedNegativeImage = false;
 		_topMargin = 0;
 		_bottomMargin = _height - 1;
 		foreach (y; 0 .. _height) {
@@ -771,6 +782,7 @@ private:
 		_moveCursorTo(_savedX, _savedY);
 		_fgColor = _savedFGColor;
 		_bgColor = _savedBGColor;
+		_negativeImage = _savedNegativeImage;
 	}
 
 	// DECSET
@@ -792,6 +804,7 @@ private:
 		_savedY = _curY;
 		_savedFGColor = _fgColor;
 		_savedBGColor = _bgColor;
+		_savedNegativeImage = _negativeImage;
 	}
 
 	// DECSCUSR
@@ -878,7 +891,14 @@ private:
 					_moveCursorTo(0, _curY + 1);
 				}
 			}
-			_screen[_curY * _width + _curX] = FormattedChar(ch, _fgColor, _bgColor, CharStyle.none);
+
+			if (_negativeImage) {
+				_screen[_curY * _width + _curX] = FormattedChar(ch, _bgColor, _fgColor, CharStyle.none);
+
+			} else {
+				_screen[_curY * _width + _curX] = FormattedChar(ch, _fgColor, _bgColor, CharStyle.none);
+			}
+
 			if (active)
 				updateChar(_curX, _curY);
 			if (_curX + 1 == _width) {
