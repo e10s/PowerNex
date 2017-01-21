@@ -7,12 +7,13 @@ enum CharStyle {
 	bold = 1 << 0,
 	underline = 1 << 1,
 	italic = 1 << 2,
-	strikethru = 1 << 3
+	strikethru = 1 << 3,
+	negative = 1 << 4
 }
 
 struct FormattedChar {
 	dchar ch;
 	Color fg;
 	Color bg;
-	CharStyle style;
+	int style;
 }

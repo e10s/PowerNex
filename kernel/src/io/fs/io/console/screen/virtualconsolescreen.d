@@ -12,17 +12,15 @@ public:
 		super(NodePermissions.defaultPermissions, 0);
 		_width = width;
 		_height = height;
-		_defaultStyle = clearChar;
-		_fgColor = clearChar.fg;
-		_bgColor = clearChar.bg;
-		_savedFGColor = clearChar.fg;
-		_savedBGColor = clearChar.bg;
+		_defaultRendition = CharRendition(clearChar);
+		_rendition = CharRendition(clearChar);
+		_savedRendition = CharRendition(clearChar);
 		_topMargin = 0;
 		_bottomMargin = height - 1;
-		_clearChar = clearChar;
+		_defaultClearChar = clearChar;
 		_screen = new FormattedChar[width * height];
 		for (size_t i = 0; i < _screen.length; i++)
-			_screen[i] = _clearChar;
+			_screen[i] = clearChar;
 
 		_lineStarts = new size_t[height];
 
@@ -146,25 +144,16 @@ public:
 
 protected:
 	FormattedChar[] _screen;
-	FormattedChar _clearChar;
+	@property FormattedChar _clearChar() const {
+		return FormattedChar(_defaultClearChar.ch, _rendition.fg, _rendition.bg, _defaultClearChar.style);
+	}
+
 	size_t _width;
 	size_t _height;
 	size_t _curX;
 	size_t _curY;
 	size_t _topMargin;
 	size_t _bottomMargin; // Must be larger than _topMargin
-
-	Color _fgColor;
-
-	@property ref Color _bgColor(Color bgColor) {
-		__bgColor = bgColor;
-		_clearChar.bg = bgColor; // main purpose!!
-		return __bgColor;
-	}
-
-	@property ref Color _bgColor() {
-		return __bgColor;
-	}
 
 	/**
 	 * Used to emulate VT100/xterm.
@@ -189,14 +178,25 @@ protected:
 	abstract void updateChar(size_t x, size_t y);
 
 private:
-	const FormattedChar _defaultStyle;
-	Color __bgColor;
+	struct CharRendition {
+		Color fg;
+		Color bg;
+		int style; // Depends on CharStyle
+
+		this(FormattedChar ch) {
+			fg = ch.fg;
+			bg = ch.bg;
+			style = ch.style;
+		}
+	}
+
+	const FormattedChar _defaultClearChar;
+	const CharRendition _defaultRendition;
+	CharRendition _rendition;
+	CharRendition _savedRendition;
+
 	size_t _savedX;
 	size_t _savedY;
-	Color _savedFGColor;
-	Color _savedBGColor;
-	bool _negativeImage;
-	bool _savedNegativeImage;
 	bool _inUse;
 	bool _active;
 
@@ -369,19 +369,16 @@ private:
 
 			switch (e) {
 			case 0:
-				_fgColor = _defaultStyle.fg;
-				_bgColor = _defaultStyle.bg;
-				_negativeImage = false;
-				// In addition reset style
+				_rendition = _defaultRendition;
 				break;
 			case 7:
-				_negativeImage = true;
+				_rendition.style |= CharStyle.negative;
 				break;
 			case 27:
-				_negativeImage = false;
+				_rendition.style &= ~CharStyle.negative;
 				break;
 			case 30: .. case 37:
-				_fgColor = vgaColorPalette[e - 30];
+				_rendition.fg = vgaColorPalette[e - 30];
 				break;
 			case 38:
 				if (attributes.length > i + 4 && attributes[i + 1] == 2) {
@@ -390,13 +387,13 @@ private:
 					foreach (j, channel; attributes[i + 2 .. i + 5]) {
 						switch (j) {
 						case 0:
-							_fgColor.r = channel > 255 ? 255 : cast(ubyte)channel;
+							_rendition.fg.r = channel > 255 ? 255 : cast(ubyte)channel;
 							break;
 						case 1:
-							_fgColor.g = channel > 255 ? 255 : cast(ubyte)channel;
+							_rendition.fg.g = channel > 255 ? 255 : cast(ubyte)channel;
 							break;
 						case 2:
-							_fgColor.b = channel > 255 ? 255 : cast(ubyte)channel;
+							_rendition.fg.b = channel > 255 ? 255 : cast(ubyte)channel;
 							break;
 						default:
 							break;
@@ -407,54 +404,52 @@ private:
 					seqRemains = 2;
 					immutable n = attributes[i + 2];
 					if (n < 256) {
-						_fgColor = xterm256ColorPalette(n);
+						_rendition.fg = xterm256ColorPalette(n);
 					}
 				}
 				break;
 			case 39:
-				_fgColor = _defaultStyle.fg;
+				_rendition.fg = _defaultRendition.fg;
 				break;
 			case 40: .. case 47:
-				_bgColor = vgaColorPalette[e - 40];
+				_rendition.bg = vgaColorPalette[e - 40];
 				break;
 			case 48:
 				if (attributes.length > i + 4 && attributes[i + 1] == 2) {
 					inSeq = true;
 					seqRemains = 4;
-					auto bgColor = _bgColor;
 					foreach (j, channel; attributes[i + 2 .. i + 5]) {
 						switch (j) {
 						case 0:
-							bgColor.r = channel > 255 ? 255 : cast(ubyte)channel;
+							_rendition.bg.r = channel > 255 ? 255 : cast(ubyte)channel;
 							break;
 						case 1:
-							bgColor.g = channel > 255 ? 255 : cast(ubyte)channel;
+							_rendition.bg.g = channel > 255 ? 255 : cast(ubyte)channel;
 							break;
 						case 2:
-							bgColor.b = channel > 255 ? 255 : cast(ubyte)channel;
+							_rendition.bg.b = channel > 255 ? 255 : cast(ubyte)channel;
 							break;
 						default:
 							break;
 						}
 					}
-					_bgColor = bgColor;
 				} else if (attributes.length > i + 2 && attributes[i + 1] == 5) {
 					inSeq = true;
 					seqRemains = 2;
 					immutable n = attributes[i + 2];
 					if (n < 256) {
-						_bgColor = xterm256ColorPalette(n);
+						_rendition.bg = xterm256ColorPalette(n);
 					}
 				}
 				break;
 			case 49:
-				_bgColor = _defaultStyle.bg;
+				_rendition.bg = _defaultRendition.bg;
 				break;
 			case 90: .. case 97:
-				_fgColor = vgaColorPalette[e - 90 + 8];
+				_rendition.fg = vgaColorPalette[e - 90 + 8];
 				break;
 			case 100: .. case 107:
-				_bgColor = vgaColorPalette[e - 100 + 8];
+				_rendition.bg = vgaColorPalette[e - 100 + 8];
 				break;
 			default:
 				break;
@@ -744,12 +739,7 @@ private:
 	/* Miscellaneous control functions */
 	// RIS
 	void _resetToInitialState() {
-		_fgColor = _defaultStyle.fg;
-		_bgColor = _defaultStyle.bg;
-		_savedFGColor = _defaultStyle.fg;
-		_savedBGColor = _defaultStyle.bg;
-		_negativeImage = false;
-		_savedNegativeImage = false;
+		_rendition = _defaultRendition;
 		_topMargin = 0;
 		_bottomMargin = _height - 1;
 		foreach (y; 0 .. _height) {
@@ -769,7 +759,7 @@ private:
 	// DECALN
 	void _screenAlignmentPattern() {
 		_setTopAndBottomMargins(1, _height);
-		_screen[] = FormattedChar('E', _defaultStyle.fg, _defaultStyle.bg, _defaultStyle.style);
+		_screen[] = FormattedChar('E', _defaultRendition.fg, _defaultRendition.bg, _defaultRendition.style);
 		foreach (y; 0 .. _height) {
 			foreach (x; 0 .. _width) {
 				updateChar(x, y);
@@ -780,9 +770,7 @@ private:
 	// DECRC
 	void _restoreCursor() {
 		_moveCursorTo(_savedX, _savedY);
-		_fgColor = _savedFGColor;
-		_bgColor = _savedBGColor;
-		_negativeImage = _savedNegativeImage;
+		_rendition = _savedRendition;
 	}
 
 	// DECSET
@@ -802,9 +790,7 @@ private:
 	void _saveCursor() {
 		_savedX = _curX;
 		_savedY = _curY;
-		_savedFGColor = _fgColor;
-		_savedBGColor = _bgColor;
-		_savedNegativeImage = _negativeImage;
+		_savedRendition = _rendition;
 	}
 
 	// DECSCUSR
@@ -892,12 +878,7 @@ private:
 				}
 			}
 
-			if (_negativeImage) {
-				_screen[_curY * _width + _curX] = FormattedChar(ch, _bgColor, _fgColor, CharStyle.none);
-
-			} else {
-				_screen[_curY * _width + _curX] = FormattedChar(ch, _fgColor, _bgColor, CharStyle.none);
-			}
+			_screen[_curY * _width + _curX] = FormattedChar(ch, _rendition.fg, _rendition.bg, _rendition.style);
 
 			if (active)
 				updateChar(_curX, _curY);

@@ -113,7 +113,11 @@ private:
 	}
 
 	Slot _toSlot(FormattedChar fc) {
-		return Slot(cast(char)fc.ch, CharColor(_findNearest(fc.fg), _findNearest(fc.bg)));
+		if (fc.style & CharStyle.negative) {
+			return Slot(cast(char)fc.ch, CharColor(_findNearest(fc.bg), _findNearest(fc.fg)));
+		} else {
+			return Slot(cast(char)fc.ch, CharColor(_findNearest(fc.fg), _findNearest(fc.bg)));
+		}
 	}
 }
 

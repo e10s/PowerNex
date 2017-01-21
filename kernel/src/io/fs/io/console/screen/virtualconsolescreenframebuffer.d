@@ -55,7 +55,7 @@ protected:
 		FormattedChar ch = _screen[_curY * _width + _curX];
 
 		if (!_cursorVisible) {
-			_fb.renderChar(_font, ch.ch, _curX * _font.width, _curY * _font.height, ch.fg, ch.bg);
+			_renderFormattedChar(ch, _curX * _font.width, _curY * _font.height);
 			return;
 		}
 
@@ -64,16 +64,16 @@ protected:
 			Color tmp = ch.fg;
 			ch.fg = ch.bg;
 			ch.bg = tmp;
-			_fb.renderChar(_font, ch.ch, _curX * _font.width, _curY * _font.height, ch.fg, ch.bg);
+			_renderFormattedChar(ch, _curX * _font.width, _curY * _font.height);
 			break;
 		case CursorShape.underline:
-			_fb.renderChar(_font, ch.ch, _curX * _font.width, _curY * _font.height, ch.fg, ch.bg);
+			_renderFormattedChar(ch, _curX * _font.width, _curY * _font.height);
 
 			enum size_t underlineHeight = 2;
 			_fb.renderRect(_curX * _font.width, (_curY + 1) * _font.height - underlineHeight, _font.width, underlineHeight, ch.fg);
 			break;
 		case CursorShape.bar:
-			_fb.renderChar(_font, ch.ch, _curX * _font.width, _curY * _font.height, ch.fg, ch.bg);
+			_renderFormattedChar(ch, _curX * _font.width, _curY * _font.height);
 
 			if (!_atRightOfRightmost) {
 				_fb.renderLine(_curX * _font.width, _curY * _font.height, _curX * _font.width, (_curY + 1) * _font.height - 1, ch.fg);
@@ -88,7 +88,7 @@ protected:
 
 	override void updateChar(size_t x, size_t y) {
 		auto ch = _screen[y * _width + x];
-		_fb.renderChar(_font, ch.ch, x * _font.width, y * _font.height, ch.fg, ch.bg);
+		_renderFormattedChar(ch, x * _font.width, y * _font.height);
 	}
 
 	@property override bool active(bool active) {
@@ -102,9 +102,17 @@ private:
 	Framebuffer _fb;
 	Font _font;
 
+	void _renderFormattedChar(FormattedChar ch, ssize_t x, ssize_t y) {
+		if (ch.style & CharStyle.negative) {
+			_fb.renderChar(_font, ch.ch, x, y, ch.bg, ch.fg);
+		} else {
+			_fb.renderChar(_font, ch.ch, x, y, ch.fg, ch.bg);
+		}
+	}
+
 	void _rerender() {
 		foreach (idx, ch; _screen)
-			_fb.renderChar(_font, ch.ch, idx % _font.width, idx / _font.height, ch.fg, ch.bg);
+			_renderFormattedChar(ch, idx % _font.width, idx / _font.height);
 		updateCursor();
 	}
 }
