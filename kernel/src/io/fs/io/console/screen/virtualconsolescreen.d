@@ -371,11 +371,23 @@ private:
 			case 0:
 				_rendition = _defaultRendition;
 				break;
+			case 4:
+				_rendition.style |= CharStyle.underline;
+				break;
 			case 7:
 				_rendition.style |= CharStyle.negative;
 				break;
+			case 9:
+				_rendition.style |= CharStyle.strikethru;
+				break;
+			case 24:
+				_rendition.style &= ~CharStyle.underline;
+				break;
 			case 27:
 				_rendition.style &= ~CharStyle.negative;
+				break;
+			case 29:
+				_rendition.style &= ~CharStyle.strikethru;
 				break;
 			case 30: .. case 37:
 				_rendition.fg = vgaColorPalette[e - 30];

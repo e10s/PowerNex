@@ -108,6 +108,16 @@ private:
 		} else {
 			_fb.renderChar(_font, ch.ch, x, y, ch.fg, ch.bg);
 		}
+		if (ch.style & CharStyle.underline) {
+			immutable startX = _curX * _font.width;
+			immutable startY = (_curY + 1) * _font.height - 1;
+			_fb.renderLine(startX, startY, startX + _font.width - 1, startY, ch.fg);
+		}
+		if (ch.style & CharStyle.strikethru) {
+			immutable startX = _curX * _font.width;
+			immutable startY = _curY * _font.height + _font.height / 2;
+			_fb.renderLine(startX, startY, startX + _font.width - 1, startY, ch.fg);
+		}
 	}
 
 	void _rerender() {
